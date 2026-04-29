@@ -59,6 +59,10 @@ jobs:
       archs: ${{ steps.setup.outputs.archs }}
       ddnsto_type: ${{ steps.setup.outputs.ddnsto_type }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Setup matrix
         id: setup
         run: |
@@ -250,6 +254,10 @@ jobs:
       (needs.build-ipk.result == 'success' || needs.build-ipk.result == 'skipped') &&
       (needs.build-apk.result == 'success' || needs.build-ipk.result == 'success')
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Generate Release Notes
         uses: ncipollo/release-action@v1
         with:
