@@ -1,0 +1,124 @@
+name: Build DDNSTO Packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}-${{ matrix.sdk }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - aarch64_generic
+          - arm_cortex-a9
+          - x86_64
+          - mipsel_24kc
+        sdk:
+          - openwrt-24.10
+          - SNAPSHOT
+          - openwrt-22.03
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup variables
+        run: |
+          sudo timedatectl set-timezone 'Asia/Shanghai'
+          git config --global user.name 'actions'
+          git config --global user.email 'action@github.com'
+          echo build_time="$(date '+%Y-%m-%d')" >> "$GITHUB_ENV"
+          echo pkg_version="$(date '+%Y%m%d')" >> "$GITHUB_ENV"
+
+      - name: Update package version
+        run: |
+          # Update PKG_RELEASE in Makefile to include build date
+          sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
+          cat ddnsto/Makefile | grep PKG_RELEASE
+
+      - name: Build Packages
+        uses: sbwml/openwrt-gh-action-sdk@go1.25
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.sdk }}
+          FEEDNAME: packages_ci
+          PACKAGES: luci-app-ddnsto
+          NO_REFRESH_CHECK: true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.arch }}-${{ matrix.sdk }}
+          path: |
+            bin/packages/${{ matrix.arch }}/packages_ci/*.apk
+            bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
+
+      - name: Create compress files
+        continue-on-error: true
+        run: |
+          mkdir -p release/${{ matrix.sdk }}
+          tar -zcvf release/${{ matrix.sdk }}-${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+
+      - name: Upload packages to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
+        with:
+          name: DDNSTO ${{ env.build_time }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          replacesArtifacts: false
+          prerelease: false
+          artifacts: "release/${{ matrix.sdk }}-${{ matrix.arch }}.tar.gz"
+
+  release-notes:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Generate Release Notes
+        uses: ncipollo/release-action@v1
+        with:
+          name: DDNSTO ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          body: |
+            ## DDNSTO OpenWrt Package ${{ github.ref_name }}
+
+            ### 支持的 OpenWrt 版本
+            - OpenWrt 24.10 (apk 包格式)
+            - OpenWrt SNAPSHOT (apk 包格式)
+            - OpenWrt 22.03 (ipk 包格式)
+
+            ### 支持的架构
+            - aarch64_generic
+            - arm_cortex-a9
+            - x86_64
+            - mipsel_24kc
+
+            ### 安装说明
+
+            **OpenWrt 24.10+ (apk):**
+            ```bash
+            apk add ddnsto luci-app-ddnsto
+            ```
+
+            **OpenWrt 22.03 (opkg):**
+            ```bash
+            opkg install ddnsto luci-app-ddnsto
+            ```
+
+            ### 功能特性
+            - 多设备索引支持
+            - WebDAV 文件共享
+            - 网络连通性检测
+            - 现代化 React 管理界面
