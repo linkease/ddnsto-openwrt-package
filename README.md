@@ -1,12 +1,11 @@
 # DDNSTO OpenWrt Package
 
-DDNSTO 远程访问 OpenWrt 软件包，支持新版本 OpenWrt (24.10+) 的 apk 包管理器，同时兼容旧版本的 opkg。
+DDNSTO 远程访问 OpenWrt 软件包，支持新版本 OpenWrt (SNAPSHOT) 的 apk 包管理器，同时兼容旧版本的 opkg。
 
 ## 特性
 
-- ✅ 支持 OpenWrt 24.10+ (apk 包格式)
 - ✅ 支持 OpenWrt SNAPSHOT (apk 包格式)
-- ✅ 支持 OpenWrt 22.03 (ipk 包格式)
+- ✅ 支持 OpenWrt 24.10 / 22.03 (ipk 包格式)
 - ✅ 多设备索引支持
 - ✅ WebDAV 文件共享
 - ✅ 网络连通性检测
@@ -21,7 +20,7 @@ DDNSTO 远程访问 OpenWrt 软件包，支持新版本 OpenWrt (24.10+) 的 apk
 
 ## 安装
 
-### OpenWrt 24.10+ (apk)
+### OpenWrt SNAPSHOT (apk)
 
 ```bash
 # 添加软件源（如果需要）
@@ -31,7 +30,7 @@ echo "https://your-repo-url/packages.tar.gz" >> /etc/apk/repositories
 apk add ddnsto luci-app-ddnsto
 ```
 
-### OpenWrt 22.03 (opkg)
+### OpenWrt 24.10 / 22.03 (opkg/ipk)
 
 ```bash
 # 添加软件源（如果需要）
@@ -96,6 +95,12 @@ make package/luci-app-ddnsto/compile V=s
 1. 推送 tag (`v*`) 触发构建
 2. 或手动触发 workflow_dispatch
 
+构建矩阵：
+| SDK | 包格式 | 说明 |
+|-----|--------|------|
+| openwrt-24.10 | ipk | 稳定版，兼容 22.03/24.10 |
+| SNAPSHOT | apk | 开发版，使用 apk 包管理器 |
+
 ```bash
 # 创建并推送 tag
 git tag v3.2.1
@@ -142,7 +147,7 @@ LuCI 控制器提供以下 RESTful API：
 
 本项目从原版 ddnsto 迁移，主要改进：
 
-1. **支持 apk 包格式**: 适配 OpenWrt 24.10+ 新包管理器
+1. **支持 apk 包格式**: 适配 OpenWrt SNAPSHOT 新包管理器
 2. **统一构建**: 使用 GitHub Actions 自动构建多版本
 3. **优化 init 脚本**: 使用 procd 进程管理，支持 limits 设置
 4. **保留功能**: 完整保留 WebDAV、文件共享等高级功能

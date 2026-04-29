@@ -2,6 +2,16 @@ name: Build DDNSTO Packages
 
 on:
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - apk_only
+          - ipk_only
   push:
     tags:
       - 'v*'
@@ -10,9 +20,11 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build ${{ matrix.arch }}-${{ matrix.sdk }}
+  # 构建 APK (SNAPSHOT)
+  build-apk:
+    name: Build APK ${{ matrix.arch }}
     runs-on: ubuntu-latest
+    if: github.event.inputs.build_type == 'apk_only' || github.event.inputs.build_type == 'all' || github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
@@ -22,9 +34,7 @@ jobs:
           - x86_64
           - mipsel_24kc
         sdk:
-          - openwrt-24.10
           - SNAPSHOT
-          - openwrt-22.03
 
     steps:
       - uses: actions/checkout@v4
@@ -41,11 +51,10 @@ jobs:
 
       - name: Update package version
         run: |
-          # Update PKG_RELEASE in Makefile to include build date
           sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
           cat ddnsto/Makefile | grep PKG_RELEASE
 
-      - name: Build Packages
+      - name: Build Packages (APK)
         uses: sbwml/openwrt-gh-action-sdk@go1.25
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.sdk }}
@@ -53,21 +62,20 @@ jobs:
           PACKAGES: luci-app-ddnsto
           NO_REFRESH_CHECK: true
 
-      - name: Upload artifacts
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.arch }}-${{ matrix.sdk }}
+          name: ${{ matrix.arch }}-apk
           path: |
             bin/packages/${{ matrix.arch }}/packages_ci/*.apk
-            bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
 
-      - name: Create compress files
+      - name: Create APK release files
         continue-on-error: true
         run: |
-          mkdir -p release/${{ matrix.sdk }}
-          tar -zcvf release/${{ matrix.sdk }}-${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+          mkdir -p release/apk
+          tar -zcvf release/apk/${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
 
-      - name: Upload packages to release
+      - name: Upload APK to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: ncipollo/release-action@v1
         with:
@@ -77,10 +85,77 @@ jobs:
           allowUpdates: true
           replacesArtifacts: false
           prerelease: false
-          artifacts: "release/${{ matrix.sdk }}-${{ matrix.arch }}.tar.gz"
+          artifacts: "release/apk/${{ matrix.arch }}.tar.gz"
+
+  # 构建 IPK (24.10)
+  build-ipk:
+    name: Build IPK ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    if: github.event.inputs.build_type == 'ipk_only' || github.event.inputs.build_type == 'all' || github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - aarch64_generic
+          - arm_cortex-a9
+          - x86_64
+          - mipsel_24kc
+        sdk:
+          - openwrt-24.10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup variables
+        run: |
+          sudo timedatectl set-timezone 'Asia/Shanghai'
+          git config --global user.name 'actions'
+          git config --global user.email 'action@github.com'
+          echo build_time="$(date '+%Y-%m-%d')" >> "$GITHUB_ENV"
+          echo pkg_version="$(date '+%Y%m%d')" >> "$GITHUB_ENV"
+
+      - name: Update package version
+        run: |
+          sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
+          cat ddnsto/Makefile | grep PKG_RELEASE
+
+      - name: Build Packages (IPK)
+        uses: sbwml/openwrt-gh-action-sdk@go1.25
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.sdk }}
+          FEEDNAME: packages_ci
+          PACKAGES: luci-app-ddnsto
+          NO_REFRESH_CHECK: true
+
+      - name: Upload IPK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.arch }}-ipk
+          path: |
+            bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
+
+      - name: Create IPK release files
+        continue-on-error: true
+        run: |
+          mkdir -p release/ipk
+          tar -zcvf release/ipk/${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+
+      - name: Upload IPK to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
+        with:
+          name: DDNSTO ${{ env.build_time }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          replacesArtifacts: false
+          prerelease: false
+          artifacts: "release/ipk/${{ matrix.arch }}.tar.gz"
 
   release-notes:
-    needs: build
+    needs: [build-apk, build-ipk]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -95,9 +170,8 @@ jobs:
             ## DDNSTO OpenWrt Package ${{ github.ref_name }}
 
             ### 支持的 OpenWrt 版本
-            - OpenWrt 24.10 (apk 包格式)
+            - OpenWrt 24.10 / 22.03 (ipk 包格式)
             - OpenWrt SNAPSHOT (apk 包格式)
-            - OpenWrt 22.03 (ipk 包格式)
 
             ### 支持的架构
             - aarch64_generic
@@ -107,14 +181,14 @@ jobs:
 
             ### 安装说明
 
-            **OpenWrt 24.10+ (apk):**
-            ```bash
-            apk add ddnsto luci-app-ddnsto
-            ```
-
-            **OpenWrt 22.03 (opkg):**
+            **OpenWrt 24.10 / 22.03 (opkg/ipk):**
             ```bash
             opkg install ddnsto luci-app-ddnsto
+            ```
+
+            **OpenWrt SNAPSHOT (apk):**
+            ```bash
+            apk add ddnsto luci-app-ddnsto
             ```
 
             ### 功能特性
