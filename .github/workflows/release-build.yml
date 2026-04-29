@@ -20,17 +20,26 @@ on:
         options:
           - standard
           - lite
-      arch:
-        description: '架构（可多选，默认全部）'
+      arch_aarch64:
+        description: 'aarch64_generic'
         required: true
-        default: 'all'
-        type: choice
-        options:
-          - all
-          - aarch64_generic
-          - arm_cortex-a9
-          - x86_64
-          - mipsel_24kc
+        default: true
+        type: boolean
+      arch_arm:
+        description: 'arm_cortex-a9'
+        required: true
+        default: true
+        type: boolean
+      arch_x86_64:
+        description: 'x86_64'
+        required: true
+        default: true
+        type: boolean
+      arch_mipsel:
+        description: 'mipsel_24kc'
+        required: true
+        default: true
+        type: boolean
   push:
     tags:
       - 'v*'
@@ -54,10 +63,42 @@ jobs:
         id: setup
         run: |
           # 设置架构列表
-          if [ "${{ github.event_name }}" == "push" ] || [ "${{ github.event.inputs.arch }}" == "all" ] || [ -z "${{ github.event.inputs.arch }}" ]; then
+          if [ "${{ github.event_name }}" == "push" ]; then
+            # push 事件构建全部架构
             echo 'archs=["aarch64_generic","arm_cortex-a9","x86_64","mipsel_24kc"]' >> $GITHUB_OUTPUT
           else
-            echo 'archs=["${{ github.event.inputs.arch }}"]' >> $GITHUB_OUTPUT
+            # 手动触发时根据选择的架构构建
+            archs="["
+            first=true
+            if [ "${{ github.event.inputs.arch_aarch64 }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"aarch64_generic\""
+              first=false
+            fi
+            if [ "${{ github.event.inputs.arch_arm }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"arm_cortex-a9\""
+              first=false
+            fi
+            if [ "${{ github.event.inputs.arch_x86_64 }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"x86_64\""
+              first=false
+            fi
+            if [ "${{ github.event.inputs.arch_mipsel }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"mipsel_24kc\""
+              first=false
+            fi
+            archs="$archs]"
+            
+            # 如果没有选择任何架构，默认构建全部
+            if [ "$archs" == "[]" ]; then
+              archs='["aarch64_generic","arm_cortex-a9","x86_64","mipsel_24kc"]'
+            fi
+            
+            echo "archs=$archs" >> $GITHUB_OUTPUT
+            echo "Selected architectures: $archs"
           fi
           
           # 设置 DDNSTO 类型
