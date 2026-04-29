@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: '构建类型'
+        description: '包格式'
         required: true
         default: 'all'
         type: choice
@@ -12,6 +12,25 @@ on:
           - all
           - apk_only
           - ipk_only
+      ddnsto_type:
+        description: 'DDNSTO 类型'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - lite
+      arch:
+        description: '架构（可多选，默认全部）'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - aarch64_generic
+          - arm_cortex-a9
+          - x86_64
+          - mipsel_24kc
   push:
     tags:
       - 'v*'
@@ -24,19 +43,40 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # 构建矩阵配置
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      archs: ${{ steps.setup.outputs.archs }}
+      ddnsto_type: ${{ steps.setup.outputs.ddnsto_type }}
+    steps:
+      - name: Setup matrix
+        id: setup
+        run: |
+          # 设置架构列表
+          if [ "${{ github.event_name }}" == "push" ] || [ "${{ github.event.inputs.arch }}" == "all" ] || [ -z "${{ github.event.inputs.arch }}" ]; then
+            echo 'archs=["aarch64_generic","arm_cortex-a9","x86_64","mipsel_24kc"]' >> $GITHUB_OUTPUT
+          else
+            echo 'archs=["${{ github.event.inputs.arch }}"]' >> $GITHUB_OUTPUT
+          fi
+          
+          # 设置 DDNSTO 类型
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo 'ddnsto_type=standard' >> $GITHUB_OUTPUT
+          else
+            echo 'ddnsto_type=${{ github.event.inputs.ddnsto_type }}' >> $GITHUB_OUTPUT
+          fi
+
   # 构建 APK (SNAPSHOT)
   build-apk:
-    name: Build APK ${{ matrix.arch }}
+    name: Build APK ${{ matrix.arch }} (${{ needs.setup.outputs.ddnsto_type }})
     runs-on: ubuntu-latest
+    needs: setup
     if: github.event.inputs.build_type == 'apk_only' || github.event.inputs.build_type == 'all' || github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - aarch64_generic
-          - arm_cortex-a9
-          - x86_64
-          - mipsel_24kc
+        arch: ${{ fromJson(needs.setup.outputs.archs) }}
         sdk:
           - SNAPSHOT
 
@@ -65,11 +105,12 @@ jobs:
           FEEDNAME: packages_ci
           PACKAGES: luci-app-ddnsto
           NO_REFRESH_CHECK: true
+          DDNSTO_TYPE: ${{ needs.setup.outputs.ddnsto_type }}
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.arch }}-apk
+          name: ${{ matrix.arch }}-apk-${{ needs.setup.outputs.ddnsto_type }}
           path: |
             bin/packages/${{ matrix.arch }}/packages_ci/*.apk
 
@@ -77,7 +118,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p release/apk
-          tar -zcvf release/apk/${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+          tar -zcvf release/apk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
 
       - name: Upload APK to release
         if: startsWith(github.ref, 'refs/tags/')
@@ -89,21 +130,18 @@ jobs:
           allowUpdates: true
           replacesArtifacts: false
           prerelease: false
-          artifacts: "release/apk/${{ matrix.arch }}.tar.gz"
+          artifacts: "release/apk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz"
 
   # 构建 IPK (24.10)
   build-ipk:
-    name: Build IPK ${{ matrix.arch }}
+    name: Build IPK ${{ matrix.arch }} (${{ needs.setup.outputs.ddnsto_type }})
     runs-on: ubuntu-latest
+    needs: setup
     if: github.event.inputs.build_type == 'ipk_only' || github.event.inputs.build_type == 'all' || github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - aarch64_generic
-          - arm_cortex-a9
-          - x86_64
-          - mipsel_24kc
+        arch: ${{ fromJson(needs.setup.outputs.archs) }}
         sdk:
           - openwrt-24.10
 
@@ -132,11 +170,12 @@ jobs:
           FEEDNAME: packages_ci
           PACKAGES: luci-app-ddnsto
           NO_REFRESH_CHECK: true
+          DDNSTO_TYPE: ${{ needs.setup.outputs.ddnsto_type }}
 
       - name: Upload IPK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.arch }}-ipk
+          name: ${{ matrix.arch }}-ipk-${{ needs.setup.outputs.ddnsto_type }}
           path: |
             bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
 
@@ -144,7 +183,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p release/ipk
-          tar -zcvf release/ipk/${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+          tar -zcvf release/ipk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
 
       - name: Upload IPK to release
         if: startsWith(github.ref, 'refs/tags/')
@@ -156,7 +195,7 @@ jobs:
           allowUpdates: true
           replacesArtifacts: false
           prerelease: false
-          artifacts: "release/ipk/${{ matrix.arch }}.tar.gz"
+          artifacts: "release/ipk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz"
 
   release-notes:
     needs: [build-apk, build-ipk]

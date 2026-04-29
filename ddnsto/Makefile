@@ -13,6 +13,10 @@ PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
 PKG_SOURCE_DATE:=3.0.4
 PKG_RELEASE:=8
+
+# 构建类型：standard 或 lite
+DDNSTO_TYPE?=standard
+
 ARCH_HEXCODE:=
 ifeq ($(ARCH),x86_64)
 ARCH_HEXCODE=8664
@@ -24,9 +28,17 @@ else ifeq ($(ARCH),mipsel)
 ARCH_HEXCODE=1b0c
 endif
 PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
-PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
-PKG_SOURCE_URL:=https://dl.istoreos.com/binary/ddnsto/
-PKG_HASH:=486aa15a5e026b5a3aca72f1850746e127a7e86ef11db8a7c498dad29545eaf6
+
+# 根据类型选择下载地址和文件名
+ifeq ($(DDNSTO_TYPE),lite)
+  PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
+  PKG_SOURCE_URL:=https://dl.istoreos.com/binary/ddnsto/lite/
+  PKG_HASH:=skip
+else
+  PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
+  PKG_SOURCE_URL:=https://dl.istoreos.com/binary/ddnsto/
+  PKG_HASH:=486aa15a5e026b5a3aca72f1850746e127a7e86ef11db8a7c498dad29545eaf6
+endif
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
 
@@ -42,7 +54,7 @@ define Package/$(PKG_NAME)
 	SECTION:=net
 	CATEGORY:=Network
 	SUBMENU:=Web Servers/Proxies
-	TITLE:=DDNS.to - the reverse proxy
+	TITLE:=DDNS.to - the reverse proxy ($(DDNSTO_TYPE))
 	DEPENDS:=@(arm||aarch64||x86_64||mipsel) +ca-bundle
 	URL:=https://www.ddnsto.com/
 endef
@@ -50,6 +62,8 @@ endef
 define Package/$(PKG_NAME)/description
   DDNS.to is a reverse proxy service that allows you to access
   your devices from anywhere without public IP or port forwarding.
+  
+  Build type: $(DDNSTO_TYPE)
   Features:
   - Multi-device index support
   - WebDAV file sharing
@@ -76,8 +90,12 @@ endef
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/config $(1)/etc/init.d $(1)/etc/uci-defaults
+ifeq ($(DDNSTO_TYPE),lite)
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddnsto-lite.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddnstod
+else
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddnsto.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddnstod
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddwebdav.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddwebdav
+endif
 	$(INSTALL_CONF) ./files/ddnsto.config $(1)/etc/config/ddnsto
 	$(INSTALL_BIN) ./files/ddnsto.init $(1)/etc/init.d/ddnsto
 	$(INSTALL_BIN) ./files/ddnsto.uci-default $(1)/etc/uci-defaults/ddnsto
