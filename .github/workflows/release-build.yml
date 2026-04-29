@@ -241,7 +241,14 @@ jobs:
   release-notes:
     needs: [build-apk, build-ipk]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    # 只要有任意一个构建任务成功运行，就触发 release-notes
+    # 并且只在 push tag 时触发
+    if: |
+      always() && 
+      startsWith(github.ref, 'refs/tags/') && 
+      (needs.build-apk.result == 'success' || needs.build-apk.result == 'skipped') &&
+      (needs.build-ipk.result == 'success' || needs.build-ipk.result == 'skipped') &&
+      (needs.build-apk.result == 'success' || needs.build-ipk.result == 'success')
     steps:
       - name: Generate Release Notes
         uses: ncipollo/release-action@v1
