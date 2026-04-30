@@ -36,6 +36,8 @@ PKG_SOURCE_VERSION:=$(ARCH_NAME)
 # 自定义包名格式: ddnsto_3.1.7-aarch64-2_all
 # 通过设置 PKG_VERSION 为 3.1.7-aarch64-2 格式来实现
 PKG_VERSION:=$(PKG_SOURCE_DATE)-$(ARCH_NAME)-$(PKG_RELEASE)
+PKG_RELEASE:=
+PKGARCH:=all
 
 # 根据类型选择下载地址和文件名
 ifeq ($(DDNSTO_TYPE),lite)
@@ -52,9 +54,6 @@ PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
 
 PKG_BUILD_PARALLEL:=1
 PKG_USE_MIPS16:=0
-
-# Support both apk and ipk package formats
-PKGARCH:=all
 
 include $(INCLUDE_DIR)/package.mk
 
