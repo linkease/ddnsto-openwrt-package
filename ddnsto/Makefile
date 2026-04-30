@@ -31,13 +31,13 @@ PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 
 # 根据类型选择下载地址和文件名
 ifeq ($(DDNSTO_TYPE),lite)
-  PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
+  PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
   PKG_HASH:=eb437a79b79d4a60838d6171b1934f35956fc49819e3ced55675c7d859fc80d1
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
-  PKG_HASH:=eb437a79b79d4a60838d6171b1934f35956fc49819e3ced55675c7d859fc80d1
+  PKG_HASH:=93dbb92ffde552ed2006bfb6d2479549c8d02323eab3b3d1c45307fea999daaa
 endif
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
@@ -54,7 +54,7 @@ define Package/$(PKG_NAME)
 	SECTION:=net
 	CATEGORY:=Network
 	SUBMENU:=Web Servers/Proxies
-	TITLE:=DDNS.to - the reverse proxy ($(DDNSTO_TYPE))
+	TITLE:=DDNS.to - the reverse proxy
 	DEPENDS:=@(arm||aarch64||x86_64||mipsel) +ca-bundle
 	URL:=https://www.ddnsto.com/
 endef
@@ -63,7 +63,6 @@ define Package/$(PKG_NAME)/description
   DDNS.to is a reverse proxy service that allows you to access
   your devices from anywhere without public IP or port forwarding.
   
-  Build type: $(DDNSTO_TYPE)
   Features:
   - Multi-device index support
   - WebDAV file sharing
