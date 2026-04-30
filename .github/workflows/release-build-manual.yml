@@ -182,8 +182,18 @@ jobs:
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
           make defconfig
           
-          # 构建
-          make package/ddnsto/compile V=s -j$(nproc) || make package/ddnsto/compile V=s -j1
+          # 构建 - 使用详细输出
+          echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
+          make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
+            echo "=== BUILD FAILED ==="
+            echo "=== Last 100 lines of build.log ==="
+            tail -100 build.log
+            echo "=== Full ddnsto package directory ==="
+            ls -la feeds/packages_ci/ddnsto/
+            echo "=== Makefile content ==="
+            cat feeds/packages_ci/ddnsto/Makefile
+            exit 1
+          }
           
           # 复制输出
           mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci
