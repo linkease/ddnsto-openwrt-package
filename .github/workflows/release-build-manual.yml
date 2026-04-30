@@ -176,18 +176,34 @@ jobs:
         run: |
           cd ~/sdk
           
-          # 创建feed
+          # 创建feed目录并复制包
           mkdir -p feeds/packages_ci
           cp -r $GITHUB_WORKSPACE/ddnsto feeds/packages_ci/
           cp -r $GITHUB_WORKSPACE/luci-app-ddnsto feeds/packages_ci/ 2>/dev/null || true
           
-          # 更新feed
-          ./scripts/feeds update packages_ci
-          ./scripts/feeds install -a -p packages_ci
+          echo "=== Feed directory contents ==="
+          ls -la feeds/packages_ci/
+          
+          # 更新feed索引
+          echo "=== Updating feeds ==="
+          ./scripts/feeds update packages_ci 2>&1 || {
+            echo "Feed update failed, trying alternative method..."
+            # 手动创建索引
+            cd feeds/packages_ci && ls -d */ > ../../package/feeds/packages_ci.index 2>/dev/null || true
+            cd ~/sdk
+          }
+          
+          # 安装feed包
+          echo "=== Installing feeds ==="
+          ./scripts/feeds install -p packages_ci ddnsto 2>&1 || {
+            echo "Feed install failed, trying install all..."
+            ./scripts/feeds install -a 2>&1
+          }
           
           # 检查feed是否正确安装
           echo "=== Checking installed feeds ==="
-          ls -la package/feeds/packages_ci/ 2>/dev/null || echo "No packages_ci feed found"
+          ls -la package/feeds/ 2>/dev/null || echo "No feeds directory"
+          find package/feeds -name "ddnsto" -type d 2>/dev/null || echo "ddnsto not found in feeds"
           
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
@@ -195,14 +211,14 @@ jobs:
           
           # 构建 - 使用详细输出
           echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
-          make package/feeds/packages_ci/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
+          make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
             echo "=== BUILD FAILED ==="
             echo "=== Last 100 lines of build.log ==="
             tail -100 build.log
             echo "=== Full ddnsto package directory ==="
             ls -la feeds/packages_ci/ddnsto/
-            echo "=== Installed feed directory ==="
-            ls -la package/feeds/packages_ci/ 2>/dev/null || echo "Feed not installed"
+            echo "=== All package directories ==="
+            find package -name "ddnsto" -type d 2>/dev/null || echo "ddnsto not found"
             echo "=== Makefile content ==="
             cat feeds/packages_ci/ddnsto/Makefile
             exit 1
@@ -303,18 +319,33 @@ jobs:
         run: |
           cd ~/sdk
           
-          # 创建feed
+          # 创建feed目录并复制包
           mkdir -p feeds/packages_ci
           cp -r $GITHUB_WORKSPACE/ddnsto feeds/packages_ci/
           cp -r $GITHUB_WORKSPACE/luci-app-ddnsto feeds/packages_ci/ 2>/dev/null || true
           
-          # 更新feed
-          ./scripts/feeds update packages_ci
-          ./scripts/feeds install -a -p packages_ci
+          echo "=== Feed directory contents ==="
+          ls -la feeds/packages_ci/
+          
+          # 更新feed索引
+          echo "=== Updating feeds ==="
+          ./scripts/feeds update packages_ci 2>&1 || {
+            echo "Feed update failed, trying alternative method..."
+            cd feeds/packages_ci && ls -d */ > ../../package/feeds/packages_ci.index 2>/dev/null || true
+            cd ~/sdk
+          }
+          
+          # 安装feed包
+          echo "=== Installing feeds ==="
+          ./scripts/feeds install -p packages_ci ddnsto 2>&1 || {
+            echo "Feed install failed, trying install all..."
+            ./scripts/feeds install -a 2>&1
+          }
           
           # 检查feed是否正确安装
           echo "=== Checking installed feeds ==="
-          ls -la package/feeds/packages_ci/ 2>/dev/null || echo "No packages_ci feed found"
+          ls -la package/feeds/ 2>/dev/null || echo "No feeds directory"
+          find package/feeds -name "ddnsto" -type d 2>/dev/null || echo "ddnsto not found in feeds"
           
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
@@ -322,10 +353,12 @@ jobs:
           
           # 构建 - 使用详细输出
           echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
-          make package/feeds/packages_ci/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
+          make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
             echo "=== BUILD FAILED ==="
             echo "=== Last 100 lines of build.log ==="
             tail -100 build.log
+            echo "=== All package directories ==="
+            find package -name "ddnsto" -type d 2>/dev/null || echo "ddnsto not found"
             exit 1
           }
           
