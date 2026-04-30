@@ -12,22 +12,27 @@ PKG_ARCH_DDNSTO:=$(ARCH)
 PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
 PKG_SOURCE_DATE:=3.1.7
-PKG_RELEASE:=4
+PKG_RELEASE:=2
 
 # 构建类型：standard 或 lite
 DDNSTO_TYPE?=standard
 
-ARCH_HEXCODE:=
+# 架构名称映射
+ARCH_NAME:=
 ifeq ($(ARCH),x86_64)
-ARCH_HEXCODE=8664
+ARCH_NAME=x86_64
 else ifeq ($(ARCH),aarch64)
-ARCH_HEXCODE=aa64
+ARCH_NAME=aarch64
 else ifeq ($(ARCH),arm)
-ARCH_HEXCODE=aa32
+ARCH_NAME=arm
 else ifeq ($(ARCH),mipsel)
-ARCH_HEXCODE=1b0c
+ARCH_NAME=mipsel
 endif
-PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
+PKG_SOURCE_VERSION:=$(ARCH_NAME)
+
+# 自定义包名格式: ddnsto_3.1.7-aarch64-2_all
+# 通过设置 PKG_VERSION 为 3.1.7-aarch64-2 格式来实现
+PKG_VERSION:=$(PKG_SOURCE_DATE)-$(ARCH_NAME)-$(PKG_RELEASE)
 
 # 根据类型选择下载地址和文件名
 ifeq ($(DDNSTO_TYPE),lite)
@@ -54,7 +59,7 @@ define Package/$(PKG_NAME)
 	SECTION:=net
 	CATEGORY:=Network
 	SUBMENU:=Web Servers/Proxies
-	TITLE:=DDNS.to - the reverse proxy
+	TITLE:=DDNS.to - the reverse proxy ($(DDNSTO_TYPE))
 	DEPENDS:=@(arm||aarch64||x86_64||mipsel) +ca-bundle
 	URL:=https://www.ddnsto.com/
 endef
@@ -63,6 +68,7 @@ define Package/$(PKG_NAME)/description
   DDNS.to is a reverse proxy service that allows you to access
   your devices from anywhere without public IP or port forwarding.
   
+  Build type: $(DDNSTO_TYPE)
   Features:
   - Multi-device index support
   - WebDAV file sharing
