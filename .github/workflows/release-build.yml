@@ -149,8 +149,8 @@ jobs:
 
       - name: Update package version
         run: |
-          sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
-          cat ddnsto/Makefile | grep PKG_RELEASE
+          sed -i "s/PKG_SOURCE_DATE:=.*/PKG_SOURCE_DATE:=$(date '+%Y%m%d')/" ddnsto/Makefile
+          cat ddnsto/Makefile | grep PKG_SOURCE_DATE
 
       - name: Build Packages (APK)
         uses: sbwml/openwrt-gh-action-sdk@go1.25
@@ -215,8 +215,8 @@ jobs:
 
       - name: Update package version
         run: |
-          sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
-          cat ddnsto/Makefile | grep PKG_RELEASE
+          sed -i "s/PKG_SOURCE_DATE:=.*/PKG_SOURCE_DATE:=$(date '+%Y%m%d')/" ddnsto/Makefile
+          cat ddnsto/Makefile | grep PKG_SOURCE_DATE
 
       - name: Build Packages (IPK)
         uses: sbwml/openwrt-gh-action-sdk@go1.25
