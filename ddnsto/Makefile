@@ -32,7 +32,7 @@ PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 # 根据类型选择下载地址和文件名
 ifeq ($(DDNSTO_TYPE),lite)
   PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
-  PKG_SOURCE_URL:=https://raw.githubusercontent.com/linkease/ddnsto-openwrt-package/main/
+  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
   PKG_HASH:=skip
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
