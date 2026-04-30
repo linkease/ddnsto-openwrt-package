@@ -321,7 +321,7 @@ jobs:
           
           # 复制输出
           mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci
-          find bin/packages/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \;
+          find ~/sdk/bin/packages/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \;
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
