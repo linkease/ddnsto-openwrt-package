@@ -1,0 +1,212 @@
+name: Build DDNSTO Packages (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '包格式'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - apk_only
+          - ipk_only
+      ddnsto_type:
+        description: 'DDNSTO 类型'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - lite
+      arch_aarch64:
+        description: 'aarch64_generic'
+        required: true
+        default: true
+        type: boolean
+      arch_arm:
+        description: 'arm_cortex-a9'
+        required: true
+        default: true
+        type: boolean
+      arch_x86_64:
+        description: 'x86_64'
+        required: true
+        default: true
+        type: boolean
+      arch_mipsel:
+        description: 'mipsel_24kc'
+        required: true
+        default: true
+        type: boolean
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      archs: ${{ steps.setup.outputs.archs }}
+      ddnsto_type: ${{ steps.setup.outputs.ddnsto_type }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup matrix
+        id: setup
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo 'archs=["aarch64_generic","arm_cortex-a9","x86_64","mipsel_24kc"]' >> $GITHUB_OUTPUT
+            echo 'ddnsto_type=standard' >> $GITHUB_OUTPUT
+          else
+            archs="["
+            first=true
+            if [ "${{ github.event.inputs.arch_aarch64 }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"aarch64_generic\""
+              first=false
+            fi
+            if [ "${{ github.event.inputs.arch_arm }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"arm_cortex-a9\""
+              first=false
+            fi
+            if [ "${{ github.event.inputs.arch_x86_64 }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"x86_64\""
+              first=false
+            fi
+            if [ "${{ github.event.inputs.arch_mipsel }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"mipsel_24kc\""
+              first=false
+            fi
+            archs="$archs]"
+            
+            if [ "$archs" == "[]" ]; then
+              archs='["aarch64_generic","arm_cortex-a9","x86_64","mipsel_24kc"]'
+            fi
+            
+            echo "archs=$archs" >> $GITHUB_OUTPUT
+            echo "ddnsto_type=${{ github.event.inputs.ddnsto_type }}" >> $GITHUB_OUTPUT
+          fi
+
+  build-ipk:
+    name: Build IPK ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    needs: setup
+    if: github.event.inputs.build_type == 'ipk_only' || github.event.inputs.build_type == 'all' || github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJson(needs.setup.outputs.archs) }}
+        include:
+          - arch: aarch64_generic
+            sdk_target: armsr-armv8
+            sdk_url: https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/armsr/armv8/openwrt-sdk-24.10-SNAPSHOT-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+          - arch: arm_cortex-a9
+            sdk_target: mvebu-cortexa9
+            sdk_url: https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/mvebu/cortexa9/openwrt-sdk-24.10-SNAPSHOT-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst
+          - arch: x86_64
+            sdk_target: x86-64
+            sdk_url: https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/x86/64/openwrt-sdk-24.10-SNAPSHOT-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+          - arch: mipsel_24kc
+            sdk_target: ramips-mt7621
+            sdk_url: https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/ramips/mt7621/openwrt-sdk-24.10-SNAPSHOT-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup variables
+        run: |
+          sudo timedatectl set-timezone 'Asia/Shanghai'
+          echo build_time="$(date '+%Y-%m-%d')" >> "$GITHUB_ENV"
+
+      - name: Update package version
+        run: |
+          sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
+
+      # SDK缓存
+      - name: Cache SDK
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: ~/sdk
+          key: openwrt-sdk-24.10-${{ matrix.arch }}-${{ hashFiles('ddnsto/Makefile') }}
+          restore-keys: |
+            openwrt-sdk-24.10-${{ matrix.arch }}-
+
+      # 下载SDK（如果缓存未命中）
+      - name: Download SDK
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/sdk
+          echo "Downloading SDK from ${{ matrix.sdk_url }}"
+          wget -q --show-progress -O ~/sdk/sdk.tar.zst "${{ matrix.sdk_url }}"
+          echo "Extracting SDK..."
+          cd ~/sdk && tar -xf sdk.tar.zst --strip-components=1 && rm sdk.tar.zst
+
+      - name: Setup SDK
+        run: |
+          cd ~/sdk
+          ./scripts/feeds update -a || true
+          ./scripts/feeds install -a || true
+
+      - name: Build Package
+        env:
+          DDNSTO_TYPE: ${{ needs.setup.outputs.ddnsto_type }}
+        run: |
+          cd ~/sdk
+          
+          # 创建feed
+          mkdir -p feeds/packages_ci
+          cp -r $GITHUB_WORKSPACE/ddnsto feeds/packages_ci/
+          cp -r $GITHUB_WORKSPACE/luci-app-ddnsto feeds/packages_ci/ 2>/dev/null || true
+          
+          # 更新feed
+          ./scripts/feeds update packages_ci
+          ./scripts/feeds install -a -p packages_ci
+          
+          # 配置
+          echo "CONFIG_PACKAGE_ddnsto=m" >> .config
+          make defconfig
+          
+          # 构建
+          make package/ddnsto/compile V=s -j$(nproc) || make package/ddnsto/compile V=s -j1
+          
+          # 复制输出
+          mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci
+          find bin/packages/ -name "*.ipk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \;
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.arch }}-ipk-${{ needs.setup.outputs.ddnsto_type }}
+          path: bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
+
+      - name: Create release files
+        run: |
+          mkdir -p release/ipk
+          tar -zcvf release/ipk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
+        with:
+          name: DDNSTO ${{ env.build_time }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          replacesArtifacts: false
+          artifacts: "release/ipk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz"
