@@ -264,19 +264,19 @@ jobs:
         if: steps.cache-sdk.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/sdk
-          # SNAPSHOT SDK URLs
+          # APK 构建使用官方 OpenWrt 站点的 24.10-SNAPSHOT SDK（清华镜像不同步 SNAPSHOT）
           case "${{ matrix.arch }}" in
             aarch64_generic)
-              SDK_URL="https://mirrors.tuna.tsinghua.edu.cn/openwrt/snapshots/targets/armsr/armv8/openwrt-sdk-snapshot-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              SDK_URL="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/armsr/armv8/openwrt-sdk-24.10-SNAPSHOT-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
               ;;
             arm_cortex-a9)
-              SDK_URL="https://mirrors.tuna.tsinghua.edu.cn/openwrt/snapshots/targets/mvebu/cortexa9/openwrt-sdk-snapshot-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
+              SDK_URL="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/mvebu/cortexa9/openwrt-sdk-24.10-SNAPSHOT-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
               ;;
             x86_64)
-              SDK_URL="https://mirrors.tuna.tsinghua.edu.cn/openwrt/snapshots/targets/x86/64/openwrt-sdk-snapshot-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              SDK_URL="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/x86/64/openwrt-sdk-24.10-SNAPSHOT-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
               ;;
             mipsel_24kc)
-              SDK_URL="https://mirrors.tuna.tsinghua.edu.cn/openwrt/snapshots/targets/ramips/mt7621/openwrt-sdk-snapshot-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              SDK_URL="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/ramips/mt7621/openwrt-sdk-24.10-SNAPSHOT-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
               ;;
           esac
           echo "Downloading SDK from $SDK_URL"
