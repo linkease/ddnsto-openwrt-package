@@ -11,8 +11,8 @@ PKG_ARCH_DDNSTO:=$(ARCH)
 
 PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
-PKG_SOURCE_DATE:=3.0.4
-PKG_RELEASE:=8
+PKG_SOURCE_DATE:=3.1.7
+PKG_RELEASE:=3
 
 # 构建类型：standard 或 lite
 DDNSTO_TYPE?=standard
@@ -32,7 +32,7 @@ PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 # 根据类型选择下载地址和文件名
 ifeq ($(DDNSTO_TYPE),lite)
   PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
-  PKG_SOURCE_URL:=https://dl.istoreos.com/binary/ddnsto/lite/
+  PKG_SOURCE_URL:=file://$(CURDIR)/../
   PKG_HASH:=skip
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
