@@ -176,34 +176,13 @@ jobs:
         run: |
           cd ~/sdk
           
-          # 创建feed目录并复制包
-          mkdir -p feeds/packages_ci
-          cp -r $GITHUB_WORKSPACE/ddnsto feeds/packages_ci/
-          cp -r $GITHUB_WORKSPACE/luci-app-ddnsto feeds/packages_ci/ 2>/dev/null || true
+          # 直接复制包到package目录（不使用feeds机制）
+          mkdir -p package/ddnsto package/luci-app-ddnsto
+          cp -r $GITHUB_WORKSPACE/ddnsto/* package/ddnsto/
+          cp -r $GITHUB_WORKSPACE/luci-app-ddnsto/* package/luci-app-ddnsto/ 2>/dev/null || true
           
-          echo "=== Feed directory contents ==="
-          ls -la feeds/packages_ci/
-          
-          # 更新feed索引
-          echo "=== Updating feeds ==="
-          ./scripts/feeds update packages_ci 2>&1 || {
-            echo "Feed update failed, trying alternative method..."
-            # 手动创建索引
-            cd feeds/packages_ci && ls -d */ > ../../package/feeds/packages_ci.index 2>/dev/null || true
-            cd ~/sdk
-          }
-          
-          # 安装feed包
-          echo "=== Installing feeds ==="
-          ./scripts/feeds install -p packages_ci ddnsto 2>&1 || {
-            echo "Feed install failed, trying install all..."
-            ./scripts/feeds install -a 2>&1
-          }
-          
-          # 检查feed是否正确安装
-          echo "=== Checking installed feeds ==="
-          ls -la package/feeds/ 2>/dev/null || echo "No feeds directory"
-          find package/feeds -name "ddnsto" -type d 2>/dev/null || echo "ddnsto not found in feeds"
+          echo "=== Package directory contents ==="
+          ls -la package/ddnsto/
           
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
@@ -215,12 +194,10 @@ jobs:
             echo "=== BUILD FAILED ==="
             echo "=== Last 100 lines of build.log ==="
             tail -100 build.log
-            echo "=== Full ddnsto package directory ==="
-            ls -la feeds/packages_ci/ddnsto/
-            echo "=== All package directories ==="
-            find package -name "ddnsto" -type d 2>/dev/null || echo "ddnsto not found"
+            echo "=== Package directory ==="
+            ls -la package/ddnsto/
             echo "=== Makefile content ==="
-            cat feeds/packages_ci/ddnsto/Makefile
+            cat package/ddnsto/Makefile
             exit 1
           }
           
@@ -319,33 +296,13 @@ jobs:
         run: |
           cd ~/sdk
           
-          # 创建feed目录并复制包
-          mkdir -p feeds/packages_ci
-          cp -r $GITHUB_WORKSPACE/ddnsto feeds/packages_ci/
-          cp -r $GITHUB_WORKSPACE/luci-app-ddnsto feeds/packages_ci/ 2>/dev/null || true
+          # 直接复制包到package目录（不使用feeds机制）
+          mkdir -p package/ddnsto package/luci-app-ddnsto
+          cp -r $GITHUB_WORKSPACE/ddnsto/* package/ddnsto/
+          cp -r $GITHUB_WORKSPACE/luci-app-ddnsto/* package/luci-app-ddnsto/ 2>/dev/null || true
           
-          echo "=== Feed directory contents ==="
-          ls -la feeds/packages_ci/
-          
-          # 更新feed索引
-          echo "=== Updating feeds ==="
-          ./scripts/feeds update packages_ci 2>&1 || {
-            echo "Feed update failed, trying alternative method..."
-            cd feeds/packages_ci && ls -d */ > ../../package/feeds/packages_ci.index 2>/dev/null || true
-            cd ~/sdk
-          }
-          
-          # 安装feed包
-          echo "=== Installing feeds ==="
-          ./scripts/feeds install -p packages_ci ddnsto 2>&1 || {
-            echo "Feed install failed, trying install all..."
-            ./scripts/feeds install -a 2>&1
-          }
-          
-          # 检查feed是否正确安装
-          echo "=== Checking installed feeds ==="
-          ls -la package/feeds/ 2>/dev/null || echo "No feeds directory"
-          find package/feeds -name "ddnsto" -type d 2>/dev/null || echo "ddnsto not found in feeds"
+          echo "=== Package directory contents ==="
+          ls -la package/ddnsto/
           
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
@@ -357,8 +314,8 @@ jobs:
             echo "=== BUILD FAILED ==="
             echo "=== Last 100 lines of build.log ==="
             tail -100 build.log
-            echo "=== All package directories ==="
-            find package -name "ddnsto" -type d 2>/dev/null || echo "ddnsto not found"
+            echo "=== Package directory ==="
+            ls -la package/ddnsto/
             exit 1
           }
           
