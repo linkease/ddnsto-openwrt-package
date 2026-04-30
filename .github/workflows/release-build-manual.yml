@@ -54,7 +54,7 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
-      archs: ${{ steps.setup.outputs.archs }}
+      matrix: ${{ steps.setup.outputs.matrix }}
       ddnsto_type: ${{ steps.setup.outputs.ddnsto_type }}
     steps:
       - uses: actions/checkout@v4
@@ -64,41 +64,63 @@ jobs:
       - name: Setup matrix
         id: setup
         run: |
+          # SDK配置映射
+          declare -A SDK_URLS
+          SDK_URLS[aarch64_generic]="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/armsr/armv8/openwrt-sdk-24.10-SNAPSHOT-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS[arm_cortex-a9]="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/mvebu/cortexa9/openwrt-sdk-24.10-SNAPSHOT-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
+          SDK_URLS[x86_64]="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/x86/64/openwrt-sdk-24.10-SNAPSHOT-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS[mipsel_24kc]="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/ramips/mt7621/openwrt-sdk-24.10-SNAPSHOT-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          
+          # 构建矩阵JSON
+          matrix="["
+          first=true
+          
           if [ "${{ github.event_name }}" == "push" ]; then
-            echo 'archs=["aarch64_generic","arm_cortex-a9","x86_64","mipsel_24kc"]' >> $GITHUB_OUTPUT
+            # push事件构建全部
+            for arch in aarch64_generic arm_cortex-a9 x86_64 mipsel_24kc; do
+              if [ "$first" == "false" ]; then matrix="$matrix,"; fi
+              matrix="$matrix{\"arch\":\"$arch\",\"sdk_url\":\"${SDK_URLS[$arch]}\"}"
+              first=false
+            done
             echo 'ddnsto_type=standard' >> $GITHUB_OUTPUT
           else
-            archs="["
-            first=true
+            # 手动触发时根据选择构建
             if [ "${{ github.event.inputs.arch_aarch64 }}" == "true" ]; then
-              if [ "$first" == "false" ]; then archs="$archs,"; fi
-              archs="$archs\"aarch64_generic\""
+              if [ "$first" == "false" ]; then matrix="$matrix,"; fi
+              matrix="$matrix{\"arch\":\"aarch64_generic\",\"sdk_url\":\"${SDK_URLS[aarch64_generic]}\"}"
               first=false
             fi
             if [ "${{ github.event.inputs.arch_arm }}" == "true" ]; then
-              if [ "$first" == "false" ]; then archs="$archs,"; fi
-              archs="$archs\"arm_cortex-a9\""
+              if [ "$first" == "false" ]; then matrix="$matrix,"; fi
+              matrix="$matrix{\"arch\":\"arm_cortex-a9\",\"sdk_url\":\"${SDK_URLS[arm_cortex-a9]}\"}"
               first=false
             fi
             if [ "${{ github.event.inputs.arch_x86_64 }}" == "true" ]; then
-              if [ "$first" == "false" ]; then archs="$archs,"; fi
-              archs="$archs\"x86_64\""
+              if [ "$first" == "false" ]; then matrix="$matrix,"; fi
+              matrix="$matrix{\"arch\":\"x86_64\",\"sdk_url\":\"${SDK_URLS[x86_64]}\"}"
               first=false
             fi
             if [ "${{ github.event.inputs.arch_mipsel }}" == "true" ]; then
-              if [ "$first" == "false" ]; then archs="$archs,"; fi
-              archs="$archs\"mipsel_24kc\""
+              if [ "$first" == "false" ]; then matrix="$matrix,"; fi
+              matrix="$matrix{\"arch\":\"mipsel_24kc\",\"sdk_url\":\"${SDK_URLS[mipsel_24kc]}\"}"
               first=false
             fi
-            archs="$archs]"
             
-            if [ "$archs" == "[]" ]; then
-              archs='["aarch64_generic","arm_cortex-a9","x86_64","mipsel_24kc"]'
+            # 如果没有选择任何架构，默认构建全部
+            if [ "$first" == "true" ]; then
+              for arch in aarch64_generic arm_cortex-a9 x86_64 mipsel_24kc; do
+                if [ "$first" == "false" ]; then matrix="$matrix,"; fi
+                matrix="$matrix{\"arch\":\"$arch\",\"sdk_url\":\"${SDK_URLS[$arch]}\"}"
+                first=false
+              done
             fi
             
-            echo "archs=$archs" >> $GITHUB_OUTPUT
             echo "ddnsto_type=${{ github.event.inputs.ddnsto_type }}" >> $GITHUB_OUTPUT
           fi
+          
+          matrix="$matrix]"
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "Matrix: $matrix"
 
   build-ipk:
     name: Build IPK ${{ matrix.arch }}
@@ -108,20 +130,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ fromJson(needs.setup.outputs.archs) }}
-        include:
-          - arch: aarch64_generic
-            sdk_target: armsr-armv8
-            sdk_url: https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/armsr/armv8/openwrt-sdk-24.10-SNAPSHOT-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst
-          - arch: arm_cortex-a9
-            sdk_target: mvebu-cortexa9
-            sdk_url: https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/mvebu/cortexa9/openwrt-sdk-24.10-SNAPSHOT-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst
-          - arch: x86_64
-            sdk_target: x86-64
-            sdk_url: https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/x86/64/openwrt-sdk-24.10-SNAPSHOT-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst
-          - arch: mipsel_24kc
-            sdk_target: ramips-mt7621
-            sdk_url: https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/ramips/mt7621/openwrt-sdk-24.10-SNAPSHOT-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+        include: ${{ fromJson(needs.setup.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -137,7 +146,6 @@ jobs:
         run: |
           sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
 
-      # SDK缓存
       - name: Cache SDK
         id: cache-sdk
         uses: actions/cache@v4
@@ -147,7 +155,6 @@ jobs:
           restore-keys: |
             openwrt-sdk-24.10-${{ matrix.arch }}-
 
-      # 下载SDK（如果缓存未命中）
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
         run: |
