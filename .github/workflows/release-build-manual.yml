@@ -319,15 +319,22 @@ jobs:
             exit 1
           }
           
-          # 复制输出
+          # 复制输出 - 同时查找 .apk 和 .ipk 文件（不同SDK版本可能使用不同格式）
           mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci
-          find ~/sdk/bin/packages/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \;
+          echo "=== Searching for package files in ~/sdk/bin/packages/ ==="
+          find ~/sdk/bin/packages/ -type f \( -name "*.apk" -o -name "*.ipk" \) 2>/dev/null | head -20
+          echo "=== Copying .apk files ==="
+          find ~/sdk/bin/packages/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \; 2>/dev/null || true
+          echo "=== Copying .ipk files (fallback) ==="
+          find ~/sdk/bin/packages/ -name "*.ipk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \; 2>/dev/null || true
+          echo "=== Output directory contents ==="
+          ls -la $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ 2>/dev/null || echo "Directory is empty or does not exist"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.arch }}-apk-${{ needs.setup.outputs.ddnsto_type }}
-          path: bin/packages/${{ matrix.arch }}/packages_ci/*.apk
+          path: bin/packages/${{ matrix.arch }}/packages_ci/*
 
       - name: Create release files
         run: |
