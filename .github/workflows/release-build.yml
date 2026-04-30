@@ -145,7 +145,11 @@ jobs:
           git config --global user.name 'actions'
           git config --global user.email 'action@github.com'
           echo build_time="$(date '+%Y-%m-%d')" >> "$GITHUB_ENV"
-          echo "DDNSTO_TYPE=${{ matrix.ddnsto_type }}" >> "$GITHUB_ENV"
+
+      - name: Set DDNSTO_TYPE in Makefile
+        run: |
+          sed -i "s/DDNSTO_TYPE?=standard/DDNSTO_TYPE=${{ matrix.ddnsto_type }}/" ddnsto/Makefile
+          grep "DDNSTO_TYPE" ddnsto/Makefile | head -1
 
       - name: Build Packages (APK)
         uses: sbwml/openwrt-gh-action-sdk@go1.25
@@ -154,7 +158,6 @@ jobs:
           FEEDNAME: packages_ci
           PACKAGES: luci-app-ddnsto
           NO_REFRESH_CHECK: true
-          DDNSTO_TYPE: ${{ matrix.ddnsto_type }}
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
@@ -206,7 +209,11 @@ jobs:
           git config --global user.name 'actions'
           git config --global user.email 'action@github.com'
           echo build_time="$(date '+%Y-%m-%d')" >> "$GITHUB_ENV"
-          echo "DDNSTO_TYPE=${{ matrix.ddnsto_type }}" >> "$GITHUB_ENV"
+
+      - name: Set DDNSTO_TYPE in Makefile
+        run: |
+          sed -i "s/DDNSTO_TYPE?=standard/DDNSTO_TYPE=${{ matrix.ddnsto_type }}/" ddnsto/Makefile
+          grep "DDNSTO_TYPE" ddnsto/Makefile | head -1
 
       - name: Build Packages (IPK)
         uses: sbwml/openwrt-gh-action-sdk@go1.25
@@ -215,7 +222,6 @@ jobs:
           FEEDNAME: packages_ci
           PACKAGES: luci-app-ddnsto
           NO_REFRESH_CHECK: true
-          DDNSTO_TYPE: ${{ matrix.ddnsto_type }}
 
       - name: Upload IPK artifacts
         uses: actions/upload-artifact@v4
