@@ -64,12 +64,12 @@ jobs:
       - name: Setup matrix
         id: setup
         run: |
-          # SDK配置映射
+          # SDK配置映射 - 使用官方镜像（清华镜像不同步SNAPSHOT）
           declare -A SDK_URLS
-          SDK_URLS[aarch64_generic]="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/armsr/armv8/openwrt-sdk-24.10-SNAPSHOT-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
-          SDK_URLS[arm_cortex-a9]="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/mvebu/cortexa9/openwrt-sdk-24.10-SNAPSHOT-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
-          SDK_URLS[x86_64]="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/x86/64/openwrt-sdk-24.10-SNAPSHOT-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
-          SDK_URLS[mipsel_24kc]="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/24.10-SNAPSHOT/targets/ramips/mt7621/openwrt-sdk-24.10-SNAPSHOT-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS[aarch64_generic]="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/armsr/armv8/openwrt-sdk-24.10-SNAPSHOT-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS[arm_cortex-a9]="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/mvebu/cortexa9/openwrt-sdk-24.10-SNAPSHOT-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
+          SDK_URLS[x86_64]="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/x86/64/openwrt-sdk-24.10-SNAPSHOT-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS[mipsel_24kc]="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/ramips/mt7621/openwrt-sdk-24.10-SNAPSHOT-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
           
           # 构建矩阵JSON
           matrix="["
