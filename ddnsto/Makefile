@@ -17,36 +17,43 @@ PKG_RELEASE:=3
 # 构建类型：standard 或 lite
 DDNSTO_TYPE?=standard
 
+# 调试信息
+$(info DDNSTO_TYPE is set to: $(DDNSTO_TYPE))
+
+# 架构名称映射
+ARCH_NAME:=
 ARCH_HEXCODE:=
 ifeq ($(ARCH),x86_64)
+ARCH_NAME=x86_64
 ARCH_HEXCODE=8664
 else ifeq ($(ARCH),aarch64)
+ARCH_NAME=aarch64
 ARCH_HEXCODE=aa64
 else ifeq ($(ARCH),arm)
+ARCH_NAME=arm
 ARCH_HEXCODE=aa32
 else ifeq ($(ARCH),mipsel)
+ARCH_NAME=mipsel
 ARCH_HEXCODE=1b0c
 endif
 PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
+
 
 # 根据类型选择下载地址和文件名
 ifeq ($(DDNSTO_TYPE),lite)
   PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
-  PKG_HASH:=skip
+  PKG_HASH:=eb437a79b79d4a60838d6171b1934f35956fc49819e3ced55675c7d859fc80d1
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
-  PKG_SOURCE_URL:=https://dl.istoreos.com/binary/ddnsto/
-  PKG_HASH:=486aa15a5e026b5a3aca72f1850746e127a7e86ef11db8a7c498dad29545eaf6
+  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
+  PKG_HASH:=93dbb92ffde552ed2006bfb6d2479549c8d02323eab3b3d1c45307fea999daaa
 endif
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
 
 PKG_BUILD_PARALLEL:=1
 PKG_USE_MIPS16:=0
-
-# Support both apk and ipk package formats
-PKGARCH:=all
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -55,7 +62,8 @@ define Package/$(PKG_NAME)
 	CATEGORY:=Network
 	SUBMENU:=Web Servers/Proxies
 	TITLE:=DDNS.to - the reverse proxy ($(DDNSTO_TYPE))
-	DEPENDS:=@(arm||aarch64||x86_64||mipsel) +ca-bundle
+	DEPENDS:=
+	PKGARCH:=all
 	URL:=https://www.ddnsto.com/
 endef
 
@@ -90,12 +98,8 @@ endef
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/config $(1)/etc/init.d $(1)/etc/uci-defaults
-ifeq ($(DDNSTO_TYPE),lite)
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddnsto.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddnstod
-else
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddnsto.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddnstod
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddwebdav.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddwebdav
-endif
 	$(INSTALL_CONF) ./files/ddnsto.config $(1)/etc/config/ddnsto
 	$(INSTALL_BIN) ./files/ddnsto.init $(1)/etc/init.d/ddnsto
 	$(INSTALL_BIN) ./files/ddnsto.uci-default $(1)/etc/uci-defaults/ddnsto
