@@ -17,6 +17,9 @@ PKG_RELEASE:=2
 # 构建类型：standard 或 lite
 DDNSTO_TYPE?=standard
 
+# 调试信息
+$(info DDNSTO_TYPE is set to: $(DDNSTO_TYPE))
+
 # 架构名称映射
 ARCH_NAME:=
 ifeq ($(ARCH),x86_64)
