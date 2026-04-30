@@ -256,27 +256,27 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/sdk
-          key: openwrt-sdk-snapshot-${{ matrix.arch }}-${{ hashFiles('ddnsto/Makefile') }}
+          key: openwrt-sdk-25.12.2-${{ matrix.arch }}-${{ hashFiles('ddnsto/Makefile') }}
           restore-keys: |
-            openwrt-sdk-snapshot-${{ matrix.arch }}-
+            openwrt-sdk-25.12.2-${{ matrix.arch }}-
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/sdk
-          # APK 构建使用官方 OpenWrt 站点的 24.10-SNAPSHOT SDK（清华镜像不同步 SNAPSHOT）
+          # APK 构建使用 OpenWrt 25.12.2 SDK（支持 APK 包格式）
           case "${{ matrix.arch }}" in
             aarch64_generic)
-              SDK_URL="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/armsr/armv8/openwrt-sdk-24.10-SNAPSHOT-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              SDK_URL="https://downloads.openwrt.org/releases/25.12.2/targets/armsr/armv8/openwrt-sdk-25.12.2-armsr-armv8_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
               ;;
             arm_cortex-a9)
-              SDK_URL="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/mvebu/cortexa9/openwrt-sdk-24.10-SNAPSHOT-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
+              SDK_URL="https://downloads.openwrt.org/releases/25.12.2/targets/mvebu/cortexa9/openwrt-sdk-25.12.2-mvebu-cortexa9_gcc-14.3.0_musl_eabi.Linux-x86_64.tar.zst"
               ;;
             x86_64)
-              SDK_URL="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/x86/64/openwrt-sdk-24.10-SNAPSHOT-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              SDK_URL="https://downloads.openwrt.org/releases/25.12.2/targets/x86/64/openwrt-sdk-25.12.2-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
               ;;
             mipsel_24kc)
-              SDK_URL="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/ramips/mt7621/openwrt-sdk-24.10-SNAPSHOT-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              SDK_URL="https://downloads.openwrt.org/releases/25.12.2/targets/ramips/mt7621/openwrt-sdk-25.12.2-ramips-mt7621_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
               ;;
           esac
           echo "Downloading SDK from $SDK_URL"
@@ -319,22 +319,15 @@ jobs:
             exit 1
           }
           
-          # 复制输出 - 同时查找 .apk 和 .ipk 文件（不同SDK版本可能使用不同格式）
+          # 复制输出
           mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci
-          echo "=== Searching for package files in ~/sdk/bin/packages/ ==="
-          find ~/sdk/bin/packages/ -type f \( -name "*.apk" -o -name "*.ipk" \) 2>/dev/null | head -20
-          echo "=== Copying .apk files ==="
-          find ~/sdk/bin/packages/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \; 2>/dev/null || true
-          echo "=== Copying .ipk files (fallback) ==="
-          find ~/sdk/bin/packages/ -name "*.ipk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \; 2>/dev/null || true
-          echo "=== Output directory contents ==="
-          ls -la $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ 2>/dev/null || echo "Directory is empty or does not exist"
+          find bin/packages/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \;
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.arch }}-apk-${{ needs.setup.outputs.ddnsto_type }}
-          path: bin/packages/${{ matrix.arch }}/packages_ci/*
+          path: bin/packages/${{ matrix.arch }}/packages_ci/*.apk
 
       - name: Create release files
         run: |
