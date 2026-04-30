@@ -98,12 +98,8 @@ endef
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/config $(1)/etc/init.d $(1)/etc/uci-defaults
-ifeq ($(DDNSTO_TYPE),lite)
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddnsto-lite.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddnstod
-else
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddnsto.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddnstod
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddwebdav.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddwebdav
-endif
 	$(INSTALL_CONF) ./files/ddnsto.config $(1)/etc/config/ddnsto
 	$(INSTALL_BIN) ./files/ddnsto.init $(1)/etc/init.d/ddnsto
 	$(INSTALL_BIN) ./files/ddnsto.uci-default $(1)/etc/uci-defaults/ddnsto
