@@ -1,0 +1,381 @@
+name: Build DDNSTO Packages (Optimized)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '包格式'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - apk_only
+          - ipk_only
+      ddnsto_type:
+        description: 'DDNSTO 类型'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - lite
+      arch_aarch64:
+        description: 'aarch64_generic'
+        required: true
+        default: true
+        type: boolean
+      arch_arm:
+        description: 'arm_cortex-a9'
+        required: true
+        default: true
+        type: boolean
+      arch_x86_64:
+        description: 'x86_64'
+        required: true
+        default: true
+        type: boolean
+      arch_mipsel:
+        description: 'mipsel_24kc'
+        required: true
+        default: true
+        type: boolean
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  # 强制使用 Node.js 24，避免弃用警告
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # 使用国内镜像源
+  OPENWRT_MIRROR: https://mirrors.tuna.tsinghua.edu.cn/openwrt
+
+jobs:
+  # 构建矩阵配置
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      archs: ${{ steps.setup.outputs.archs }}
+      ddnsto_type: ${{ steps.setup.outputs.ddnsto_type }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup matrix
+        id: setup
+        run: |
+          # 设置架构列表
+          if [ "${{ github.event_name }}" == "push" ]; then
+            # push 事件构建全部架构
+            echo 'archs=["aarch64_generic","arm_cortex-a9","x86_64","mipsel_24kc"]' >> $GITHUB_OUTPUT
+          else
+            # 手动触发时根据选择的架构构建
+            archs="["
+            first=true
+            if [ "${{ github.event.inputs.arch_aarch64 }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"aarch64_generic\""
+              first=false
+            fi
+            if [ "${{ github.event.inputs.arch_arm }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"arm_cortex-a9\""
+              first=false
+            fi
+            if [ "${{ github.event.inputs.arch_x86_64 }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"x86_64\""
+              first=false
+            fi
+            if [ "${{ github.event.inputs.arch_mipsel }}" == "true" ]; then
+              if [ "$first" == "false" ]; then archs="$archs,"; fi
+              archs="$archs\"mipsel_24kc\""
+              first=false
+            fi
+            archs="$archs]"
+            
+            # 如果没有选择任何架构，默认构建全部
+            if [ "$archs" == "[]" ]; then
+              archs='["aarch64_generic","arm_cortex-a9","x86_64","mipsel_24kc"]'
+            fi
+            
+            echo "archs=$archs" >> $GITHUB_OUTPUT
+            echo "Selected architectures: $archs"
+          fi
+          
+          # 设置 DDNSTO 类型
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo 'ddnsto_type=standard' >> $GITHUB_OUTPUT
+          else
+            echo 'ddnsto_type=${{ github.event.inputs.ddnsto_type }}' >> $GITHUB_OUTPUT
+          fi
+
+  # 构建 APK (SNAPSHOT)
+  build-apk:
+    name: Build APK ${{ matrix.arch }} (${{ needs.setup.outputs.ddnsto_type }})
+    runs-on: ubuntu-latest
+    needs: setup
+    if: github.event.inputs.build_type == 'apk_only' || github.event.inputs.build_type == 'all' || github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJson(needs.setup.outputs.archs) }}
+        sdk:
+          - SNAPSHOT
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup variables
+        run: |
+          sudo timedatectl set-timezone 'Asia/Shanghai'
+          git config --global user.name 'actions'
+          git config --global user.email 'action@github.com'
+          echo build_time="$(date '+%Y-%m-%d')" >> "$GITHUB_ENV"
+          echo pkg_version="$(date '+%Y%m%d')" >> "$GITHUB_ENV"
+
+      - name: Update package version
+        run: |
+          sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
+          cat ddnsto/Makefile | grep PKG_RELEASE
+
+      # SDK 缓存 - 大幅减少下载时间
+      - name: Cache OpenWrt SDK
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.openwrt-cache
+            /tmp/openwrt-sdk
+          key: openwrt-sdk-${{ matrix.arch }}-snapshot-${{ hashFiles('ddnsto/Makefile') }}
+          restore-keys: |
+            openwrt-sdk-${{ matrix.arch }}-snapshot-
+            openwrt-sdk-${{ matrix.arch }}-
+
+      # 预下载SDK到缓存目录（如果缓存未命中）
+      - name: Pre-download SDK
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.openwrt-cache
+          # 根据架构确定SDK下载链接
+          case "${{ matrix.arch }}" in
+            aarch64_generic)
+              SDK_URL="${{ env.OPENWRT_MIRROR }}/snapshots/targets/armsr/armv8/openwrt-sdk-snapshot-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              ;;
+            arm_cortex-a9)
+              SDK_URL="${{ env.OPENWRT_MIRROR }}/snapshots/targets/mvebu/cortexa9/openwrt-sdk-snapshot-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
+              ;;
+            x86_64)
+              SDK_URL="${{ env.OPENWRT_MIRROR }}/snapshots/targets/x86/64/openwrt-sdk-snapshot-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              ;;
+            mipsel_24kc)
+              SDK_URL="${{ env.OPENWRT_MIRROR }}/snapshots/targets/ramips/mt7621/openwrt-sdk-snapshot-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              ;;
+          esac
+          
+          if [ -n "$SDK_URL" ]; then
+            echo "Downloading SDK from: $SDK_URL"
+            wget -q --show-progress -O ~/.openwrt-cache/sdk-${{ matrix.arch }}.tar.zst "$SDK_URL" || echo "Will let action download SDK"
+          fi
+
+      - name: Build Packages (APK)
+        uses: sbwml/openwrt-gh-action-sdk@go1.25
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.sdk }}
+          FEEDNAME: packages_ci
+          PACKAGES: luci-app-ddnsto
+          NO_REFRESH_CHECK: true
+          DDNSTO_TYPE: ${{ needs.setup.outputs.ddnsto_type }}
+          # 使用国内镜像
+          OPENWRT_SDK_MIRROR: ${{ env.OPENWRT_MIRROR }}
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.arch }}-apk-${{ needs.setup.outputs.ddnsto_type }}
+          path: |
+            bin/packages/${{ matrix.arch }}/packages_ci/*.apk
+
+      - name: Create APK release files
+        continue-on-error: true
+        run: |
+          mkdir -p release/apk
+          tar -zcvf release/apk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+
+      - name: Upload APK to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
+        with:
+          name: DDNSTO ${{ env.build_time }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          replacesArtifacts: false
+          prerelease: false
+          artifacts: "release/apk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz"
+
+  # 构建 IPK (24.10)
+  build-ipk:
+    name: Build IPK ${{ matrix.arch }} (${{ needs.setup.outputs.ddnsto_type }})
+    runs-on: ubuntu-latest
+    needs: setup
+    if: github.event.inputs.build_type == 'ipk_only' || github.event.inputs.build_type == 'all' || github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJson(needs.setup.outputs.archs) }}
+        sdk:
+          - openwrt-24.10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup variables
+        run: |
+          sudo timedatectl set-timezone 'Asia/Shanghai'
+          git config --global user.name 'actions'
+          git config --global user.email 'action@github.com'
+          echo build_time="$(date '+%Y-%m-%d')" >> "$GITHUB_ENV"
+          echo pkg_version="$(date '+%Y%m%d')" >> "$GITHUB_ENV"
+
+      - name: Update package version
+        run: |
+          sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
+          cat ddnsto/Makefile | grep PKG_RELEASE
+
+      # SDK 缓存 - 大幅减少下载时间
+      - name: Cache OpenWrt SDK
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.openwrt-cache
+            /tmp/openwrt-sdk
+          key: openwrt-sdk-${{ matrix.arch }}-24.10-${{ hashFiles('ddnsto/Makefile') }}
+          restore-keys: |
+            openwrt-sdk-${{ matrix.arch }}-24.10-
+            openwrt-sdk-${{ matrix.arch }}-
+
+      # 预下载SDK到缓存目录（如果缓存未命中）
+      - name: Pre-download SDK
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.openwrt-cache
+          # 根据架构确定SDK下载链接 (24.10)
+          case "${{ matrix.arch }}" in
+            aarch64_generic)
+              SDK_URL="${{ env.OPENWRT_MIRROR }}/releases/24.10-SNAPSHOT/targets/armsr/armv8/openwrt-sdk-24.10-SNAPSHOT-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              ;;
+            arm_cortex-a9)
+              SDK_URL="${{ env.OPENWRT_MIRROR }}/releases/24.10-SNAPSHOT/targets/mvebu/cortexa9/openwrt-sdk-24.10-SNAPSHOT-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
+              ;;
+            x86_64)
+              SDK_URL="${{ env.OPENWRT_MIRROR }}/releases/24.10-SNAPSHOT/targets/x86/64/openwrt-sdk-24.10-SNAPSHOT-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              ;;
+            mipsel_24kc)
+              SDK_URL="${{ env.OPENWRT_MIRROR }}/releases/24.10-SNAPSHOT/targets/ramips/mt7621/openwrt-sdk-24.10-SNAPSHOT-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+              ;;
+          esac
+          
+          if [ -n "$SDK_URL" ]; then
+            echo "Downloading SDK from: $SDK_URL"
+            wget -q --show-progress -O ~/.openwrt-cache/sdk-${{ matrix.arch }}-24.10.tar.zst "$SDK_URL" || echo "Will let action download SDK"
+          fi
+
+      - name: Build Packages (IPK)
+        uses: sbwml/openwrt-gh-action-sdk@go1.25
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.sdk }}
+          FEEDNAME: packages_ci
+          PACKAGES: luci-app-ddnsto
+          NO_REFRESH_CHECK: true
+          DDNSTO_TYPE: ${{ needs.setup.outputs.ddnsto_type }}
+          # 使用国内镜像
+          OPENWRT_SDK_MIRROR: ${{ env.OPENWRT_MIRROR }}
+
+      - name: Upload IPK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.arch }}-ipk-${{ needs.setup.outputs.ddnsto_type }}
+          path: |
+            bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
+
+      - name: Create IPK release files
+        continue-on-error: true
+        run: |
+          mkdir -p release/ipk
+          tar -zcvf release/ipk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+
+      - name: Upload IPK to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
+        with:
+          name: DDNSTO ${{ env.build_time }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          replacesArtifacts: false
+          prerelease: false
+          artifacts: "release/ipk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz"
+
+  release-notes:
+    needs: [build-apk, build-ipk]
+    runs-on: ubuntu-latest
+    # 只要有任意一个构建任务成功运行，就触发 release-notes
+    # 并且只在 push tag 时触发
+    if: |
+      always() && 
+      startsWith(github.ref, 'refs/tags/') && 
+      (needs.build-apk.result == 'success' || needs.build-apk.result == 'skipped') &&
+      (needs.build-ipk.result == 'success' || needs.build-ipk.result == 'skipped') &&
+      (needs.build-apk.result == 'success' || needs.build-ipk.result == 'success')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Release Notes
+        uses: ncipollo/release-action@v1
+        with:
+          name: DDNSTO ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          body: |
+            ## DDNSTO OpenWrt Package ${{ github.ref_name }}
+
+            ### 支持的 OpenWrt 版本
+            - OpenWrt 24.10 / 22.03 (ipk 包格式)
+            - OpenWrt SNAPSHOT (apk 包格式)
+
+            ### 支持的架构
+            - aarch64_generic
+            - arm_cortex-a9
+            - x86_64
+            - mipsel_24kc
+
+            ### 安装说明
+
+            **OpenWrt 24.10 / 22.03 (opkg/ipk):**
+            ```bash
+            opkg install ddnsto luci-app-ddnsto
+            ```
+
+            **OpenWrt SNAPSHOT (apk):**
+            ```bash
+            apk add ddnsto luci-app-ddnsto
+            ```
+
+            ### 功能特性
+            - 多设备索引支持
+            - WebDAV 文件共享
+            - 网络连通性检测
+            - 现代化 React 管理界面
