@@ -179,6 +179,8 @@ jobs:
           cd ~/sdk
           ./scripts/feeds update -a || true
           ./scripts/feeds install -a || true
+          # 安装 luci 依赖
+          ./scripts/feeds install luci-base || true
 
       - name: Build Package
         run: |
@@ -187,10 +189,13 @@ jobs:
           # 直接复制包到package目录（不使用feeds机制）
           mkdir -p package/ddnsto package/luci-app-ddnsto
           cp -r $GITHUB_WORKSPACE/ddnsto/* package/ddnsto/
-          cp -r $GITHUB_WORKSPACE/luci-app-ddnsto/* package/luci-app-ddnsto/ 2>/dev/null || true
+          cp -r $GITHUB_WORKSPACE/luci-app-ddnsto/* package/luci-app-ddnsto/
           
           echo "=== Package directory contents ==="
+          echo "--- ddnsto ---"
           ls -la package/ddnsto/
+          echo "--- luci-app-ddnsto ---"
+          ls -la package/luci-app-ddnsto/
           
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
@@ -199,20 +204,31 @@ jobs:
           
           # 构建 - 使用详细输出
           echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
-          make package/ddnsto/compile package/luci-app-ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
-            echo "=== BUILD FAILED ==="
+          make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
+            echo "=== DDNSTO BUILD FAILED ==="
+            tail -100 build.log
+            exit 1
+          }
+          
+          echo "=== Building luci-app-ddnsto ==="
+          make package/luci-app-ddnsto/compile V=sc -j1 2>&1 | tee -a build.log || {
+            echo "=== LUCI-APP-DDNSTO BUILD FAILED ==="
             echo "=== Last 100 lines of build.log ==="
             tail -100 build.log
             echo "=== Package directory ==="
-            ls -la package/ddnsto/
+            ls -la package/luci-app-ddnsto/
             echo "=== Makefile content ==="
-            cat package/ddnsto/Makefile
+            cat package/luci-app-ddnsto/Makefile
             exit 1
           }
           
           # 复制输出
           mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci
-          find bin/packages/ -name "*.ipk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
+          find bin/packages/ -name "ddnsto*.ipk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
+          find bin/packages/ -name "luci-app-ddnsto*.ipk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
+          
+          echo "=== Final packages ==="
+          ls -la $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -297,6 +313,8 @@ jobs:
           cd ~/sdk
           ./scripts/feeds update -a || true
           ./scripts/feeds install -a || true
+          # 安装 luci 依赖
+          ./scripts/feeds install luci-base || true
 
       - name: Build Package
         run: |
@@ -305,10 +323,13 @@ jobs:
           # 直接复制包到package目录（不使用feeds机制）
           mkdir -p package/ddnsto package/luci-app-ddnsto
           cp -r $GITHUB_WORKSPACE/ddnsto/* package/ddnsto/
-          cp -r $GITHUB_WORKSPACE/luci-app-ddnsto/* package/luci-app-ddnsto/ 2>/dev/null || true
+          cp -r $GITHUB_WORKSPACE/luci-app-ddnsto/* package/luci-app-ddnsto/
           
           echo "=== Package directory contents ==="
+          echo "--- ddnsto ---"
           ls -la package/ddnsto/
+          echo "--- luci-app-ddnsto ---"
+          ls -la package/luci-app-ddnsto/
           
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
@@ -317,18 +338,31 @@ jobs:
           
           # 构建 - 使用详细输出
           echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
-          make package/ddnsto/compile package/luci-app-ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
-            echo "=== BUILD FAILED ==="
-            echo "=== Last 100 lines of build.log ==="
+          make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
+            echo "=== DDNSTO BUILD FAILED ==="
             tail -100 build.log
-            echo "=== Package directory ==="
-            ls -la package/ddnsto/
             exit 1
           }
           
-          # 复制输出
+          echo "=== Building luci-app-ddnsto ==="
+          make package/luci-app-ddnsto/compile V=sc -j1 2>&1 | tee -a build.log || {
+            echo "=== LUCI-APP-DDNSTO BUILD FAILED ==="
+            echo "=== Last 100 lines of build.log ==="
+            tail -100 build.log
+            echo "=== Package directory ==="
+            ls -la package/luci-app-ddnsto/
+            echo "=== Makefile content ==="
+            cat package/luci-app-ddnsto/Makefile
+            exit 1
+          }
+          
+          # 复制输出 - 只复制我们需要的包
           mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci
-          find bin/packages/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
+          find bin/packages/ -name "ddnsto*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
+          find bin/packages/ -name "luci-app-ddnsto*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
+          
+          echo "=== Final packages ==="
+          ls -la $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
