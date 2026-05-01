@@ -15,7 +15,7 @@ on:
       ddnsto_type:
         description: 'DDNSTO 类型'
         required: true
-        default: 'standard'
+        default: 'all'
         type: choice
         options:
           - standard
