@@ -182,11 +182,12 @@ jobs:
           
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-ddnsto=m" >> .config
           make defconfig
           
           # 构建 - 使用详细输出
           echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
-          make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
+          make package/ddnsto/compile package/luci-app-ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
             echo "=== BUILD FAILED ==="
             echo "=== Last 100 lines of build.log ==="
             tail -100 build.log
@@ -298,11 +299,12 @@ jobs:
           
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-ddnsto=m" >> .config
           make defconfig
           
           # 构建 - 使用详细输出
           echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
-          make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
+          make package/ddnsto/compile package/luci-app-ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
             echo "=== BUILD FAILED ==="
             echo "=== Last 100 lines of build.log ==="
             tail -100 build.log
