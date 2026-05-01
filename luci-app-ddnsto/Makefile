@@ -6,7 +6,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-ddnsto
-PKG_VERSION:=3.2.1
+PKG_VERSION:=4.0.2
 PKG_RELEASE:=1
 
 PKG_MAINTAINER:=jjm2473 <jjm2473@gmail.com>
