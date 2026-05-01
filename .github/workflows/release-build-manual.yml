@@ -66,12 +66,12 @@ jobs:
       - name: Setup matrix
         id: setup
         run: |
-          # SDK配置映射 - 使用官方镜像（清华镜像不同步SNAPSHOT）
+          # SDK配置映射 - 使用官方镜像
           declare -A SDK_URLS
-          SDK_URLS[aarch64_generic]="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/armsr/armv8/openwrt-sdk-24.10-SNAPSHOT-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
-          SDK_URLS[arm_cortex-a9]="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/mvebu/cortexa9/openwrt-sdk-24.10-SNAPSHOT-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
-          SDK_URLS[x86_64]="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/x86/64/openwrt-sdk-24.10-SNAPSHOT-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
-          SDK_URLS[mipsel_24kc]="https://downloads.openwrt.org/releases/24.10-SNAPSHOT/targets/ramips/mt7621/openwrt-sdk-24.10-SNAPSHOT-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS[aarch64_generic]="https://downloads.openwrt.org/releases/24.10.2/targets/armsr/armv8/openwrt-sdk-24.10.2-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS[arm_cortex-a9]="https://downloads.openwrt.org/releases/24.10.2/targets/mvebu/cortexa9/openwrt-sdk-24.10.2-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
+          SDK_URLS[x86_64]="https://downloads.openwrt.org/releases/24.10.2/targets/x86/64/openwrt-sdk-24.10.2-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS[mipsel_24kc]="https://downloads.openwrt.org/releases/24.10.2/targets/ramips/mt7621/openwrt-sdk-24.10.2-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
           
           # 构建矩阵JSON
           matrix="["
@@ -161,9 +161,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/sdk
-          key: openwrt-sdk-24.10-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}
+          key: openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}
           restore-keys: |
-            openwrt-sdk-24.10-${{ matrix.arch_info.arch }}-
+            openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
