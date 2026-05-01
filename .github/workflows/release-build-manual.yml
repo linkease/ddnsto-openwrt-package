@@ -20,6 +20,7 @@ on:
         options:
           - standard
           - lite
+          - all
       arch_aarch64:
         description: 'aarch64_generic'
         required: true
@@ -56,6 +57,7 @@ jobs:
     outputs:
       matrix: ${{ steps.setup.outputs.matrix }}
       ddnsto_type: ${{ steps.setup.outputs.ddnsto_type }}
+      ddnsto_types: ${{ steps.setup.outputs.ddnsto_types }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,6 +85,7 @@ jobs:
               first=false
             done
             echo 'ddnsto_type=standard' >> $GITHUB_OUTPUT
+            echo 'ddnsto_types=["standard"]' >> $GITHUB_OUTPUT
           else
             # 手动触发时根据选择构建
             if [ "${{ github.event.inputs.arch_aarch64 }}" == "true" ]; then
@@ -115,7 +118,15 @@ jobs:
               done
             fi
             
-            echo "ddnsto_type=${{ github.event.inputs.ddnsto_type }}" >> $GITHUB_OUTPUT
+            # 处理 ddnsto_type，all 表示同时编译 standard 和 lite
+            DDNSTO_TYPE="${{ github.event.inputs.ddnsto_type }}"
+            if [ "$DDNSTO_TYPE" == "all" ]; then
+              echo 'ddnsto_type=standard' >> $GITHUB_OUTPUT
+              echo 'ddnsto_types=["standard","lite"]' >> $GITHUB_OUTPUT
+            else
+              echo "ddnsto_type=$DDNSTO_TYPE" >> $GITHUB_OUTPUT
+              echo "ddnsto_types=[\"$DDNSTO_TYPE\"]" >> $GITHUB_OUTPUT
+            fi
           fi
           
           matrix="$matrix]"
@@ -123,14 +134,17 @@ jobs:
           echo "Matrix: $matrix"
 
   build-ipk:
-    name: Build IPK ${{ matrix.arch }}
+    name: Build IPK ${{ matrix.arch }} (${{ matrix.ddnsto_type }})
     runs-on: ubuntu-latest
     needs: setup
     if: github.event.inputs.build_type == 'ipk_only' || github.event.inputs.build_type == 'all' || github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.setup.outputs.matrix) }}
+        arch_info: ${{ fromJson(needs.setup.outputs.matrix) }}
+        ddnsto_type: ${{ fromJson(needs.setup.outputs.ddnsto_types) }}
+    env:
+      DDNSTO_TYPE: ${{ matrix.ddnsto_type }}
 
     steps:
       - uses: actions/checkout@v4
@@ -147,16 +161,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/sdk
-          key: openwrt-sdk-24.10-${{ matrix.arch }}-${{ hashFiles('ddnsto/Makefile') }}
+          key: openwrt-sdk-24.10-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}
           restore-keys: |
-            openwrt-sdk-24.10-${{ matrix.arch }}-
+            openwrt-sdk-24.10-${{ matrix.arch_info.arch }}-
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/sdk
-          echo "Downloading SDK from ${{ matrix.sdk_url }}"
-          wget -q --show-progress -O ~/sdk/sdk.tar.zst "${{ matrix.sdk_url }}"
+          echo "Downloading SDK from ${{ matrix.arch_info.sdk_url }}"
+          wget -q --show-progress -O ~/sdk/sdk.tar.zst "${{ matrix.arch_info.sdk_url }}"
           echo "Extracting SDK..."
           cd ~/sdk && tar -xf sdk.tar.zst --strip-components=1 && rm sdk.tar.zst
 
@@ -167,8 +181,6 @@ jobs:
           ./scripts/feeds install -a || true
 
       - name: Build Package
-        env:
-          DDNSTO_TYPE: ${{ needs.setup.outputs.ddnsto_type }}
         run: |
           cd ~/sdk
           
@@ -199,19 +211,19 @@ jobs:
           }
           
           # 复制输出
-          mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci
-          find bin/packages/ -name "*.ipk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \;
+          mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci
+          find bin/packages/ -name "*.ipk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.arch }}-ipk-${{ needs.setup.outputs.ddnsto_type }}
-          path: bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
+          name: ${{ matrix.arch_info.arch }}-ipk-${{ matrix.ddnsto_type }}
+          path: bin/packages/${{ matrix.arch_info.arch }}/packages_ci/*.ipk
 
       - name: Create release files
         run: |
           mkdir -p release/ipk
-          tar -zcvf release/ipk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+          tar -zcvf release/ipk/${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}.tar.gz -C bin/packages/${{ matrix.arch_info.arch }}/ packages_ci
 
       - name: Upload to release
         if: startsWith(github.ref, 'refs/tags/')
@@ -222,17 +234,20 @@ jobs:
           tag: ${{ github.ref_name }}
           allowUpdates: true
           replacesArtifacts: false
-          artifacts: "release/ipk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz"
+          artifacts: "release/ipk/${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}.tar.gz"
 
   build-apk:
-    name: Build APK ${{ matrix.arch }}
+    name: Build APK ${{ matrix.arch_info.arch }} (${{ matrix.ddnsto_type }})
     runs-on: ubuntu-latest
     needs: setup
     if: github.event.inputs.build_type == 'apk_only' || github.event.inputs.build_type == 'all' || github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.setup.outputs.matrix) }}
+        arch_info: ${{ fromJson(needs.setup.outputs.matrix) }}
+        ddnsto_type: ${{ fromJson(needs.setup.outputs.ddnsto_types) }}
+    env:
+      DDNSTO_TYPE: ${{ matrix.ddnsto_type }}
 
     steps:
       - uses: actions/checkout@v4
@@ -249,16 +264,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/sdk
-          key: openwrt-sdk-25.12.2-${{ matrix.arch }}-${{ hashFiles('ddnsto/Makefile') }}
+          key: openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}
           restore-keys: |
-            openwrt-sdk-25.12.2-${{ matrix.arch }}-
+            openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/sdk
           # APK 构建使用 OpenWrt 25.12.2 SDK（支持 APK 包格式）
-          case "${{ matrix.arch }}" in
+          case "${{ matrix.arch_info.arch }}" in
             aarch64_generic)
               SDK_URL="https://downloads.openwrt.org/releases/25.12.2/targets/armsr/armv8/openwrt-sdk-25.12.2-armsr-armv8_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
               ;;
@@ -284,8 +299,6 @@ jobs:
           ./scripts/feeds install -a || true
 
       - name: Build Package
-        env:
-          DDNSTO_TYPE: ${{ needs.setup.outputs.ddnsto_type }}
         run: |
           cd ~/sdk
           
@@ -314,19 +327,19 @@ jobs:
           }
           
           # 复制输出
-          mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci
-          find bin/packages/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch }}/packages_ci/ \;
+          mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci
+          find bin/packages/ -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.arch }}-apk-${{ needs.setup.outputs.ddnsto_type }}
-          path: bin/packages/${{ matrix.arch }}/packages_ci/*.apk
+          name: ${{ matrix.arch_info.arch }}-apk-${{ matrix.ddnsto_type }}
+          path: bin/packages/${{ matrix.arch_info.arch }}/packages_ci/*.apk
 
       - name: Create release files
         run: |
           mkdir -p release/apk
-          tar -zcvf release/apk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+          tar -zcvf release/apk/${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}.tar.gz -C bin/packages/${{ matrix.arch_info.arch }}/ packages_ci
 
       - name: Upload to release
         if: startsWith(github.ref, 'refs/tags/')
@@ -337,4 +350,4 @@ jobs:
           tag: ${{ github.ref_name }}
           allowUpdates: true
           replacesArtifacts: false
-          artifacts: "release/apk/${{ matrix.arch }}-${{ needs.setup.outputs.ddnsto_type }}.tar.gz"
+          artifacts: "release/apk/${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}.tar.gz"

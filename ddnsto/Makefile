@@ -24,7 +24,7 @@ $(info DDNSTO_TYPE is set to: $(DDNSTO_TYPE))
 ARCH_NAME:=
 ARCH_HEXCODE:=
 ifeq ($(ARCH),x86_64)
-ARCH_NAME=x86
+ARCH_NAME=x86_64
 ARCH_HEXCODE=8664
 else ifeq ($(ARCH),aarch64)
 ARCH_NAME=aarch64
@@ -36,7 +36,7 @@ else ifeq ($(ARCH),mipsel)
 ARCH_NAME=mipsel
 ARCH_HEXCODE=1b0c
 endif
-PKG_SOURCE_VERSION:=$(ARCH_NAME)
+PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 
 
 # 根据类型选择下载地址和文件名
