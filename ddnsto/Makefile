@@ -36,7 +36,7 @@ else ifeq ($(ARCH),mipsel)
 ARCH_NAME=mipsel
 ARCH_HEXCODE=1b0c
 endif
-PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
+PKG_SOURCE_VERSION:=$(ARCH)
 
 
 # 根据类型选择下载地址和文件名

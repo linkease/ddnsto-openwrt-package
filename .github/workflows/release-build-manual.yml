@@ -142,10 +142,6 @@ jobs:
           sudo timedatectl set-timezone 'Asia/Shanghai'
           echo build_time="$(date '+%Y-%m-%d')" >> "$GITHUB_ENV"
 
-      - name: Update package version
-        run: |
-          sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
-
       - name: Cache SDK
         id: cache-sdk
         uses: actions/cache@v4
@@ -246,10 +242,6 @@ jobs:
         run: |
           sudo timedatectl set-timezone 'Asia/Shanghai'
           echo build_time="$(date '+%Y-%m-%d')" >> "$GITHUB_ENV"
-
-      - name: Update package version
-        run: |
-          sed -i "s/PKG_RELEASE:=.*/PKG_RELEASE:=$(date '+%Y%m%d')/" ddnsto/Makefile
 
       - name: Cache SDK
         id: cache-sdk
