@@ -12,7 +12,7 @@ PKG_ARCH_DDNSTO:=$(ARCH)
 PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
 PKG_SOURCE_DATE:=3.1.7
-PKG_RELEASE:=3
+PKG_RELEASE:=5
 
 # 构建类型：standard 或 lite
 DDNSTO_TYPE?=standard
