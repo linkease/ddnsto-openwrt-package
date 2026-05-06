@@ -1,12 +1,13 @@
 --[[
 DDNSTO LuCI Controller + JSON API
 =================================
-
+ 
+----
 为 ddnsto 的 LuCI 页面（可用原生 JS/React/Vue）提供稳定的后端接口：
 1) 读取/更新 UCI 配置：/etc/config/ddnsto
 2) 控制 init.d 服务：/etc/init.d/ddnsto start|stop|restart|reload
-3) 查询运行状态：ddnsto 是否在运行、PID、enabled/token 是否就绪
-4) 读取最近日志：logread 过滤 ddnsto
+3) 查询运行状态：ddnstod 是否在运行、PID、enabled/token 是否就绪
+4) （可选）读取最近日志：logread 过滤 ddnsto/ddnstod
 
 路由说明
 --------
@@ -15,7 +16,7 @@ DDNSTO LuCI Controller + JSON API
 /cgi-bin/luci/admin/services/ddnsto/api/config   -- GET/POST 配置
 /c.../ddnsto/api/service                         -- POST 服务控制
 /c.../ddnsto/api/status                          -- GET 状态
-/c.../ddnsto/api/logs                            -- GET 日志
+/c.../ddnsto/api/logs                            -- GET 日志（可选）
 
 CSRF 说明
 ---------
@@ -95,6 +96,7 @@ local function get_command(cmd)
         return res
     end
     return ""
+    
 end
 
 local function parse_device_id(raw)
@@ -103,7 +105,7 @@ local function parse_device_id(raw)
   if cleaned == "" then
     return ""
   end
-  local _, did = cleaned:match("^(\S+)%s+(\S+)$")
+  local _, did = cleaned:match("^(%S+)%s+(%S+)$")
   return did or cleaned
 end
 
@@ -117,7 +119,7 @@ end
 
 local function fetch_device_id(index)
   local idx = normalize_index(index)
-  local cmd = string.format("/usr/sbin/ddnsto -x %s -w", idx)
+  local cmd = string.format("/usr/sbin/ddnstod -x %s -w", idx)
   return parse_device_id(get_command(cmd))
 end
 
@@ -205,7 +207,7 @@ local function read_config()
   local uci = require "luci.model.uci".cursor()
   local sys = require "luci.sys"
   local cfg = {
-    enabled      = "0",
+    enabled      = "1",
     token        = "",
     index        = "0",
     logger       = "0",
@@ -282,6 +284,7 @@ function index()
 
   entry({"admin", "services", "ddnsto"}, firstchild(), _("DDNSTO 远程控制"), 60).dependent = false
   entry({"admin", "services", "ddnsto", "page"}, call("action_page"), _("Settings"), 10).leaf = true
+  -- entry({"admin", "ddnsto_dev"}, call("action_ddnsto_dev"), _("DDNSTO (Dev)"), 99).leaf = true
   
   entry({"admin", "services", "ddnsto", "api", "config"},  call("api_config")).leaf = true
   entry({"admin", "services", "ddnsto", "api", "service"}, call("api_service")).leaf = true
@@ -579,7 +582,7 @@ function api_status()
     hostname = board_obj.hostname
   end
 
-  local version = get_command("/usr/sbin/ddnsto -v")
+  local version = get_command("/usr/sbin/ddnstod -v")
 
   local did = ""
   do
@@ -693,7 +696,7 @@ function api_logs()
   if lines < 10 then lines = 10 end
   if lines > 2000 then lines = 2000 end
 
-  local cmd = string.format("logread 2>/dev/null | grep -E 'ddnsto|ddwebdav' | tail -n %d", lines)
+  local cmd = string.format("logread 2>/dev/null | grep -E 'ddnsto|ddnstod' | tail -n %d", lines)
   local out = sys.exec(cmd) or ""
   local arr = {}
 
@@ -704,4 +707,20 @@ function api_logs()
   end
 
   write_json({ ok = true, data = { lines = arr, total = #arr } })
+end
+
+function action_ddnsto_dev()
+    local dsp    = require "luci.dispatcher"
+    local i18n   = require "luci.i18n"
+    local template = require "luci.template"
+    local ctx    = dsp.context or {}
+
+    local data = {
+        token   = ctx.token or "",
+        prefix  = dsp.build_url("admin", "ddnsto_dev"),
+        api_base= dsp.build_url(),
+        lang    = i18n.context.lang or "zh-cn"
+    }
+
+    template.render("ddnsto/dev", data)
 end
