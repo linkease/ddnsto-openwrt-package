@@ -12,7 +12,7 @@ PKG_RELEASE:=1
 PKG_MAINTAINER:=jjm2473 <jjm2473@gmail.com>
 
 LUCI_TITLE:=LuCI support for DDNS.to
-LUCI_DEPENDS:=+ddnsto +block-mount
+LUCI_DEPENDS:=+ddnsto +block-mount +luci-lua-runtime
 LUCI_PKGARCH:=all
 
 # Support both apk and ipk package formats

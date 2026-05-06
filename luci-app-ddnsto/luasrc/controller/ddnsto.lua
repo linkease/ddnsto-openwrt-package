@@ -117,7 +117,7 @@ end
 
 local function fetch_device_id(index)
   local idx = normalize_index(index)
-  local cmd = string.format("/usr/sbin/ddnsto -x %s -w", idx)
+  local cmd = string.format("/usr/sbin/ddnstod -x %s -w", idx)
   return parse_device_id(get_command(cmd))
 end
 
@@ -579,12 +579,13 @@ function api_status()
     hostname = board_obj.hostname
   end
 
-  local version = get_command("/usr/sbin/ddnsto -v")
+  local version = get_command("/usr/sbin/ddnstod -v")
 
   local did = ""
   do
     did = fetch_device_id(index)
   end
+
 
   write_json({
     ok = true,
