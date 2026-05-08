@@ -42,12 +42,12 @@ PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 # 根据类型选择下载地址和文件名
 ifeq ($(DDNSTO_TYPE),lite)
   PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
-  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/webdav/
-  PKG_HASH:=106f125661527a96538c7074f3bf10c13272626bccac2e45019de92a84693651
+  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
+  PKG_HASH:=eb437a79b79d4a60838d6171b1934f35956fc49819e3ced55675c7d859fc80d1
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
-  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/webdav/
-  PKG_HASH:=b1304338bc71da95028284d049c1514db8f9429950f55d99bb56e60817504acf
+  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
+  PKG_HASH:=93dbb92ffde552ed2006bfb6d2479549c8d02323eab3b3d1c45307fea999daaa
 endif
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
