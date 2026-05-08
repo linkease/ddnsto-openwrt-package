@@ -62,7 +62,7 @@ define Package/$(PKG_NAME)
 	CATEGORY:=Network
 	SUBMENU:=Web Servers/Proxies
 	TITLE:=DDNS.to - the reverse proxy ($(DDNSTO_TYPE))
-	DEPENDS:=@USE_GLIBC
+	DEPENDS:=
 	PKGARCH:=all
 	URL:=https://www.ddnsto.com/
 endef
