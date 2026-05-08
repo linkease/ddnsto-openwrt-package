@@ -187,12 +187,11 @@ jobs:
         run: |
           cd ~/sdk
 
-          # 清理旧的 ddnsto 构建标记和已安装文件，确保重新编译
-          # 保留 build_dir 目录本身，只删除标记文件和已编译的二进制文件
-          # 注意：目录名是 ddnsto-binary-3.1.7 或 ddnsto-binary-lite-3.1.7，不是 ddnsto-*
-          echo "=== Cleaning old build markers ==="
-          find build_dir/target-*/ddnsto-binary* -type f \( -name ".built" -o -name ".configured*" -o -name ".prepared*" -o -name ".quilt_checked" -o -name ".autoremove" \) -delete 2>/dev/null || true
-          find build_dir/target-*/ddnsto-binary* -type d -name ".pkgdir" -exec rm -rf {} + 2>/dev/null || true
+          # 清理旧的 ddnsto 构建目录，确保完全重新编译
+          # 必须删除整个构建目录，而不仅仅是标记文件，因为目录中可能缺少下载的源码
+          echo "=== Cleaning old build directories ==="
+          rm -rf build_dir/target-*/ddnsto-binary*
+          rm -rf build_dir/target-*/.ddnsto-binary*
           rm -rf staging_dir/packages/*/ddnsto*
           find bin/packages/ -name "ddnsto*.ipk" -delete 2>/dev/null || true
 
@@ -323,12 +322,11 @@ jobs:
         run: |
           cd ~/sdk
 
-          # 清理旧的 ddnsto 构建标记和已安装文件，确保重新编译
-          # 保留 build_dir 目录本身，只删除标记文件和已编译的二进制文件
-          # 注意：目录名是 ddnsto-binary-3.1.7 或 ddnsto-binary-lite-3.1.7，不是 ddnsto-*
-          echo "=== Cleaning old build markers ==="
-          find build_dir/target-*/ddnsto-binary* -type f \( -name ".built" -o -name ".configured*" -o -name ".prepared*" -o -name ".quilt_checked" -o -name ".autoremove" \) -delete 2>/dev/null || true
-          find build_dir/target-*/ddnsto-binary* -type d -name ".pkgdir" -exec rm -rf {} + 2>/dev/null || true
+          # 清理旧的 ddnsto 构建目录，确保完全重新编译
+          # 必须删除整个构建目录，而不仅仅是标记文件，因为目录中可能缺少下载的源码
+          echo "=== Cleaning old build directories ==="
+          rm -rf build_dir/target-*/ddnsto-binary*
+          rm -rf build_dir/target-*/.ddnsto-binary*
           rm -rf staging_dir/packages/*/ddnsto*
           find bin/packages/ -name "ddnsto*.apk" -delete 2>/dev/null || true
 
