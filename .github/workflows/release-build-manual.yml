@@ -187,11 +187,13 @@ jobs:
         run: |
           cd ~/sdk
 
-          # 清理旧的 ddnsto 构建目录，确保完全重新编译
-          # 必须删除整个构建目录，而不仅仅是标记文件，因为目录中可能缺少下载的源码
-          echo "=== Cleaning old build directories ==="
+          # 清理旧的 ddnsto 构建目录和下载文件，确保完全重新编译
+          # 必须删除整个构建目录和下载文件，因为哈希值可能不匹配
+          echo "=== Cleaning old build directories and downloads ==="
           rm -rf build_dir/target-*/ddnsto-binary*
           rm -rf build_dir/target-*/.ddnsto-binary*
+          rm -f dl/ddnsto-binary*.tar.gz
+          rm -f dl/ddnsto-binary*.tar.gz.flock
           rm -rf staging_dir/packages/*/ddnsto*
           find bin/packages/ -name "ddnsto*.ipk" -delete 2>/dev/null || true
 
@@ -322,11 +324,13 @@ jobs:
         run: |
           cd ~/sdk
 
-          # 清理旧的 ddnsto 构建目录，确保完全重新编译
-          # 必须删除整个构建目录，而不仅仅是标记文件，因为目录中可能缺少下载的源码
-          echo "=== Cleaning old build directories ==="
+          # 清理旧的 ddnsto 构建目录和下载文件，确保完全重新编译
+          # 必须删除整个构建目录和下载文件，因为哈希值可能不匹配
+          echo "=== Cleaning old build directories and downloads ==="
           rm -rf build_dir/target-*/ddnsto-binary*
           rm -rf build_dir/target-*/.ddnsto-binary*
+          rm -f dl/ddnsto-binary*.tar.gz
+          rm -f dl/ddnsto-binary*.tar.gz.flock
           rm -rf staging_dir/packages/*/ddnsto*
           find bin/packages/ -name "ddnsto*.apk" -delete 2>/dev/null || true
 
