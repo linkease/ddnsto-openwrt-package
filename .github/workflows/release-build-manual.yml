@@ -189,6 +189,7 @@ jobs:
 
           # 清理旧的 ddnsto 构建目录和下载文件，确保完全重新编译
           # 必须删除整个构建目录和下载文件，因为哈希值可能不匹配
+          # 注意：lite和standard使用不同的构建目录
           echo "=== Cleaning old build directories and downloads ==="
           rm -rf build_dir/target-*/ddnsto-binary*
           rm -rf build_dir/target-*/.ddnsto-binary*
@@ -326,6 +327,7 @@ jobs:
 
           # 清理旧的 ddnsto 构建目录和下载文件，确保完全重新编译
           # 必须删除整个构建目录和下载文件，因为哈希值可能不匹配
+          # 注意：lite和standard使用不同的构建目录
           echo "=== Cleaning old build directories and downloads ==="
           rm -rf build_dir/target-*/ddnsto-binary*
           rm -rf build_dir/target-*/.ddnsto-binary*
