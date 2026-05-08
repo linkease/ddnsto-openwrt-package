@@ -12,7 +12,7 @@ PKG_ARCH_DDNSTO:=$(ARCH)
 PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
 PKG_SOURCE_DATE:=3.1.7
-PKG_RELEASE:=6
+PKG_RELEASE:=8
 
 # 构建类型：standard 或 lite
 DDNSTO_TYPE?=standard
@@ -44,12 +44,12 @@ ifeq ($(DDNSTO_TYPE),lite)
   PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
   PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE)
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/webdav/
-  PKG_HASH:=106f125661527a96538c7074f3bf10c13272626bccac2e45019de92a84693651
+  PKG_HASH:=a339ff853add4bc10eff17a3b2950daa3d79fd909d7aadc7bd13d3191d4b7739
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
   PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/webdav/
-  PKG_HASH:=b1304338bc71da95028284d049c1514db8f9429950f55d99bb56e60817504acf
+  PKG_HASH:=8411e8e64f92058fb02d7c61a12d6857183516cc10a93a469591b4892fecb3c0
 endif
 
 
