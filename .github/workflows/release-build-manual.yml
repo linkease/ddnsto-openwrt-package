@@ -186,18 +186,25 @@ jobs:
       - name: Build Package
         run: |
           cd ~/sdk
-          
+
+          # 清理旧的 ddnsto 构建产物和缓存，确保从干净状态开始构建
+          rm -rf build_dir/target-*/ddnsto-*
+          rm -rf build_dir/target-*/.ddnsto-*
+          rm -rf staging_dir/packages/*/ddnsto*
+          find bin/packages/ -name "ddnsto*.ipk" -delete 2>/dev/null || true
+
           # 直接复制包到package目录（不使用feeds机制）
+          rm -rf package/ddnsto
           mkdir -p package/ddnsto
           cp -r $GITHUB_WORKSPACE/ddnsto/* package/ddnsto/
-          
+
           echo "=== Package directory contents ==="
           ls -la package/ddnsto/
-          
+
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
           make defconfig
-          
+
           # 构建 - 使用详细输出
           echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
           make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
@@ -205,11 +212,11 @@ jobs:
             tail -100 build.log
             exit 1
           }
-          
+
           # 复制输出
           mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci
           find bin/packages/ -name "ddnsto*.ipk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
-          
+
           echo "=== Final packages ==="
           ls -la $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/
 
@@ -303,18 +310,25 @@ jobs:
       - name: Build Package
         run: |
           cd ~/sdk
-          
+
+          # 清理旧的 ddnsto 构建产物和缓存，确保从干净状态开始构建
+          rm -rf build_dir/target-*/ddnsto-*
+          rm -rf build_dir/target-*/.ddnsto-*
+          rm -rf staging_dir/packages/*/ddnsto*
+          find bin/packages/ -name "ddnsto*.apk" -delete 2>/dev/null || true
+
           # 直接复制包到package目录（不使用feeds机制）
+          rm -rf package/ddnsto
           mkdir -p package/ddnsto
           cp -r $GITHUB_WORKSPACE/ddnsto/* package/ddnsto/
-          
+
           echo "=== Package directory contents ==="
           ls -la package/ddnsto/
-          
+
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
           make defconfig
-          
+
           # 构建 - 使用详细输出
           echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
           make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
@@ -322,11 +336,11 @@ jobs:
             tail -100 build.log
             exit 1
           }
-          
+
           # 复制输出
           mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci
           find bin/packages/ -name "ddnsto*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
-          
+
           echo "=== Final packages ==="
           ls -la $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/
 
