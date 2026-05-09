@@ -231,12 +231,18 @@ jobs:
             tar -tzf dl/ddnsto-binary-3.1.7.tar.gz
             echo "SHA256 of downloaded tar.gz:"
             sha256sum dl/ddnsto-binary-3.1.7.tar.gz
+            echo "SHA256 of binaries inside standard tar.gz:"
+            tar -Oxf dl/ddnsto-binary-3.1.7.tar.gz ddnsto-binary-3.1.7/ddnsto.x86_64 2>/dev/null | sha256sum || echo "Cannot extract x86_64"
+            tar -Oxf dl/ddnsto-binary-3.1.7.tar.gz ddnsto-binary-3.1.7/ddnsto.aarch64 2>/dev/null | sha256sum || echo "Cannot extract aarch64"
           fi
           if [ -f dl/ddnsto-binary-lite-3.1.7.tar.gz ]; then
             echo "Contents of lite tar.gz:"
             tar -tzf dl/ddnsto-binary-lite-3.1.7.tar.gz
             echo "SHA256 of downloaded lite tar.gz:"
             sha256sum dl/ddnsto-binary-lite-3.1.7.tar.gz
+            echo "SHA256 of binaries inside lite tar.gz:"
+            tar -Oxf dl/ddnsto-binary-lite-3.1.7.tar.gz ddnsto-binary-lite-3.1.7/ddnsto.x86_64 2>/dev/null | sha256sum || echo "Cannot extract x86_64"
+            tar -Oxf dl/ddnsto-binary-lite-3.1.7.tar.gz ddnsto-binary-lite-3.1.7/ddnsto.aarch64 2>/dev/null | sha256sum || echo "Cannot extract aarch64"
           fi
           echo "Directory structure of build_dir:"
           find build_dir/target-*/ddnsto-binary*/ -type d 2>/dev/null | head -20
@@ -393,12 +399,18 @@ jobs:
             tar -tzf dl/ddnsto-binary-3.1.7.tar.gz
             echo "SHA256 of downloaded tar.gz:"
             sha256sum dl/ddnsto-binary-3.1.7.tar.gz
+            echo "SHA256 of binaries inside standard tar.gz:"
+            tar -Oxf dl/ddnsto-binary-3.1.7.tar.gz ddnsto-binary-3.1.7/ddnsto.x86_64 2>/dev/null | sha256sum || echo "Cannot extract x86_64"
+            tar -Oxf dl/ddnsto-binary-3.1.7.tar.gz ddnsto-binary-3.1.7/ddnsto.aarch64 2>/dev/null | sha256sum || echo "Cannot extract aarch64"
           fi
           if [ -f dl/ddnsto-binary-lite-3.1.7.tar.gz ]; then
             echo "Contents of lite tar.gz:"
             tar -tzf dl/ddnsto-binary-lite-3.1.7.tar.gz
             echo "SHA256 of downloaded lite tar.gz:"
             sha256sum dl/ddnsto-binary-lite-3.1.7.tar.gz
+            echo "SHA256 of binaries inside lite tar.gz:"
+            tar -Oxf dl/ddnsto-binary-lite-3.1.7.tar.gz ddnsto-binary-lite-3.1.7/ddnsto.x86_64 2>/dev/null | sha256sum || echo "Cannot extract x86_64"
+            tar -Oxf dl/ddnsto-binary-lite-3.1.7.tar.gz ddnsto-binary-lite-3.1.7/ddnsto.aarch64 2>/dev/null | sha256sum || echo "Cannot extract aarch64"
           fi
           echo "Directory structure of build_dir:"
           find build_dir/target-*/ddnsto-binary*/ -type d 2>/dev/null | head -20
