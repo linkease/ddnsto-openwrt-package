@@ -264,17 +264,17 @@ jobs:
             echo "File type:"
             file "$ipk"
             # IPK 文件是 tar.gz 格式，包含 debian-binary, control.tar.gz, data.tar.gz
+            rm -rf /tmp/ipk_check
             mkdir -p /tmp/ipk_check
-            cd /tmp/ipk_check
-            tar -xzf "$ipk" 2>/dev/null || echo "Cannot extract IPK outer tar"
-            ls -la
-            if [ -f "data.tar.gz" ]; then
+            # 使用绝对路径解压
+            tar -xzf "$PWD/$ipk" -C /tmp/ipk_check 2>/dev/null || echo "Cannot extract IPK outer tar"
+            ls -la /tmp/ipk_check/
+            if [ -f "/tmp/ipk_check/data.tar.gz" ]; then
               echo "Contents of data.tar.gz:"
-              tar -tzf data.tar.gz | grep -E "(ddnsto|sbin)" || echo "No ddnsto in data.tar.gz"
+              tar -tzf /tmp/ipk_check/data.tar.gz | grep -E "(ddnsto|sbin)" || echo "No ddnsto in data.tar.gz"
               echo "SHA256 of ddnstod in data.tar.gz:"
-              tar -Oxf data.tar.gz ./usr/sbin/ddnstod 2>/dev/null | sha256sum || echo "Cannot extract ddnstod"
+              tar -Oxf /tmp/ipk_check/data.tar.gz ./usr/sbin/ddnstod 2>/dev/null | sha256sum || echo "Cannot extract ddnstod"
             fi
-            cd -
             rm -rf /tmp/ipk_check
           done
 
