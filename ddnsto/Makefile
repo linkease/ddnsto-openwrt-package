@@ -55,6 +55,10 @@ endif
 PKG_BUILD_PARALLEL:=1
 PKG_USE_MIPS16:=0
 
+# 禁用 strip，保持二进制文件原样
+STRIP:=true
+RSTRIP:=:
+
 include $(INCLUDE_DIR)/package.mk
 
 define Package/$(PKG_NAME)

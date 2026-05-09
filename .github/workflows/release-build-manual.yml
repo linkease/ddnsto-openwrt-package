@@ -263,36 +263,17 @@ jobs:
             echo "IPK file: $ipk"
             echo "File type:"
             file "$ipk"
-            echo "First 100 bytes (hex):"
-            head -c 100 "$ipk" | xxd | head -10
-            # 解压 IPK (IPK 是 ar 归档格式，包含 control.tar.gz 和 data.tar.gz)
+            # IPK 文件是 tar.gz 格式，包含 debian-binary, control.tar.gz, data.tar.gz
             mkdir -p /tmp/ipk_check
             cd /tmp/ipk_check
-            # 尝试用 ar 解压
-            ar -x "$ipk" 2>/dev/null || echo "ar failed"
-            # 如果 ar 失败，尝试手动解压
-            if [ ! -f "debian-binary" ]; then
-              echo "Trying manual extraction..."
-              # 跳过 ar 头 (8字节 magic + 60字节 header)
-              tail -c +9 "$ipk" > /tmp/ipk_tail
-              # 查找 data.tar 的开始位置
-            fi
+            tar -xzf "$ipk" 2>/dev/null || echo "Cannot extract IPK outer tar"
             ls -la
-            for tarfile in data.tar.gz data.tar.xz data.tar; do
-              [ -f "$tarfile" ] || continue
-              echo "Checking $tarfile:"
-              file "$tarfile"
-              if [[ "$tarfile" == *.gz ]]; then
-                tar -tzf "$tarfile" 2>/dev/null | grep -E "(ddnsto|sbin)" || echo "No ddnsto in $tarfile"
-                # 提取 ddnstod 并计算哈希
-                tar -Oxf "$tarfile" ./usr/sbin/ddnstod 2>/dev/null | sha256sum || echo "Cannot extract ddnstod"
-              elif [[ "$tarfile" == *.xz ]]; then
-                tar -tJf "$tarfile" 2>/dev/null | grep -E "(ddnsto|sbin)" || echo "No ddnsto in $tarfile"
-                tar -Oxf "$tarfile" ./usr/sbin/ddnstod 2>/dev/null | sha256sum || echo "Cannot extract ddnstod"
-              else
-                tar -tf "$tarfile" 2>/dev/null | grep -E "(ddnsto|sbin)" || echo "No ddnsto in $tarfile"
-              fi
-            done
+            if [ -f "data.tar.gz" ]; then
+              echo "Contents of data.tar.gz:"
+              tar -tzf data.tar.gz | grep -E "(ddnsto|sbin)" || echo "No ddnsto in data.tar.gz"
+              echo "SHA256 of ddnstod in data.tar.gz:"
+              tar -Oxf data.tar.gz ./usr/sbin/ddnstod 2>/dev/null | sha256sum || echo "Cannot extract ddnstod"
+            fi
             cd -
             rm -rf /tmp/ipk_check
           done
