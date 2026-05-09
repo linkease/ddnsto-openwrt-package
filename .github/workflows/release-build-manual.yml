@@ -238,8 +238,12 @@ jobs:
             echo "SHA256 of downloaded lite tar.gz:"
             sha256sum dl/ddnsto-binary-lite-3.1.7.tar.gz
           fi
+          echo "Directory structure of build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -type d 2>/dev/null | head -20
           echo "Files in build_dir:"
           find build_dir/target-*/ddnsto-binary*/ -type f -ls 2>/dev/null || echo "No files found"
+          echo "SHA256 of ddnstod in .pkgdir:"
+          find build_dir/target-*/ddnsto-binary*/.pkgdir -name "ddnstod" -type f -exec sha256sum {} \; 2>/dev/null || echo "No ddnstod found"
           echo "SHA256 of binaries in build_dir:"
           find build_dir/target-*/ddnsto-binary*/ -name "ddnsto.*" -type f -exec sha256sum {} \; 2>/dev/null || echo "No binary found"
 
@@ -396,8 +400,12 @@ jobs:
             echo "SHA256 of downloaded lite tar.gz:"
             sha256sum dl/ddnsto-binary-lite-3.1.7.tar.gz
           fi
+          echo "Directory structure of build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -type d 2>/dev/null | head -20
           echo "Files in build_dir:"
           find build_dir/target-*/ddnsto-binary*/ -type f -ls 2>/dev/null || echo "No files found"
+          echo "SHA256 of ddnstod in .pkgdir:"
+          find build_dir/target-*/ddnsto-binary*/.pkgdir -name "ddnstod" -type f -exec sha256sum {} \; 2>/dev/null || echo "No ddnstod found"
           echo "SHA256 of binaries in build_dir:"
           find build_dir/target-*/ddnsto-binary*/ -name "ddnsto.*" -type f -exec sha256sum {} \; 2>/dev/null || echo "No binary found"
 
