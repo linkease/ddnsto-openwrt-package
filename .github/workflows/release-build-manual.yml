@@ -227,17 +227,21 @@ jobs:
           echo "=== Verifying downloaded binary ==="
           ls -la dl/ddnsto-binary*.tar.gz 2>/dev/null || echo "No tar.gz in dl"
           if [ -f dl/ddnsto-binary-3.1.7.tar.gz ]; then
+            echo "Contents of standard tar.gz:"
+            tar -tzf dl/ddnsto-binary-3.1.7.tar.gz
             echo "SHA256 of downloaded tar.gz:"
             sha256sum dl/ddnsto-binary-3.1.7.tar.gz
-            echo "SHA256 of binary inside tar.gz:"
-            tar -Oxf dl/ddnsto-binary-3.1.7.tar.gz | sha256sum
           fi
           if [ -f dl/ddnsto-binary-lite-3.1.7.tar.gz ]; then
+            echo "Contents of lite tar.gz:"
+            tar -tzf dl/ddnsto-binary-lite-3.1.7.tar.gz
             echo "SHA256 of downloaded lite tar.gz:"
             sha256sum dl/ddnsto-binary-lite-3.1.7.tar.gz
           fi
-          echo "SHA256 of installed binary:"
-          find build_dir/target-*/ddnsto-binary*/ -name "ddnsto.*" -exec sha256sum {} \; 2>/dev/null || echo "No binary found"
+          echo "Files in build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -type f -ls 2>/dev/null || echo "No files found"
+          echo "SHA256 of binaries in build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -name "ddnsto.*" -type f -exec sha256sum {} \; 2>/dev/null || echo "No binary found"
 
           echo "=== Post-build check ==="
           ls -la build_dir/target-*/ddnsto-binary*/ 2>/dev/null || echo "Build dir not found"
@@ -381,17 +385,21 @@ jobs:
           echo "=== Verifying downloaded binary ==="
           ls -la dl/ddnsto-binary*.tar.gz 2>/dev/null || echo "No tar.gz in dl"
           if [ -f dl/ddnsto-binary-3.1.7.tar.gz ]; then
+            echo "Contents of standard tar.gz:"
+            tar -tzf dl/ddnsto-binary-3.1.7.tar.gz
             echo "SHA256 of downloaded tar.gz:"
             sha256sum dl/ddnsto-binary-3.1.7.tar.gz
-            echo "SHA256 of binary inside tar.gz:"
-            tar -Oxf dl/ddnsto-binary-3.1.7.tar.gz | sha256sum
           fi
           if [ -f dl/ddnsto-binary-lite-3.1.7.tar.gz ]; then
+            echo "Contents of lite tar.gz:"
+            tar -tzf dl/ddnsto-binary-lite-3.1.7.tar.gz
             echo "SHA256 of downloaded lite tar.gz:"
             sha256sum dl/ddnsto-binary-lite-3.1.7.tar.gz
           fi
-          echo "SHA256 of installed binary:"
-          find build_dir/target-*/ddnsto-binary*/ -name "ddnsto.*" -exec sha256sum {} \; 2>/dev/null || echo "No binary found"
+          echo "Files in build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -type f -ls 2>/dev/null || echo "No files found"
+          echo "SHA256 of binaries in build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -name "ddnsto.*" -type f -exec sha256sum {} \; 2>/dev/null || echo "No binary found"
 
           echo "=== Post-build check ==="
           ls -la build_dir/target-*/ddnsto-binary*/ 2>/dev/null || echo "Build dir not found"
