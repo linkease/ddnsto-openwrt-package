@@ -12,7 +12,7 @@ PKG_ARCH_DDNSTO:=$(ARCH)
 PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
 PKG_SOURCE_DATE:=3.1.7
-PKG_RELEASE:=8
+PKG_RELEASE:=10
 
 # 构建类型：standard 或 lite
 DDNSTO_TYPE?=standard
@@ -43,7 +43,7 @@ PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 ifeq ($(DDNSTO_TYPE),lite)
   PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
-  PKG_HASH:=d1e0396da617851a8c5762bff52fb69149d97ca4f863370d6b83502eea938106
+  PKG_HASH:=a7d508a2ac85cb70bca3729b8f6590acb03141b8a46b1eef5ed6932cf230ada9
   PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE)
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
