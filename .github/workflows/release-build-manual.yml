@@ -186,18 +186,35 @@ jobs:
       - name: Build Package
         run: |
           cd ~/sdk
-          
+
+          # 清理旧的 ddnsto 构建目录和下载文件，确保完全重新编译
+          # 必须删除整个构建目录和下载文件，因为哈希值可能不匹配
+          # 注意：lite和standard使用不同的构建目录
+          echo "=== Cleaning old build directories and downloads ==="
+          rm -rf build_dir/target-*/ddnsto-binary*
+          rm -rf build_dir/target-*/.ddnsto-binary*
+          rm -f dl/ddnsto-binary*.tar.gz
+          rm -f dl/ddnsto-binary*.tar.gz.flock
+          rm -rf staging_dir/packages/*/ddnsto*
+          find bin/packages/ -name "ddnsto*.ipk" -delete 2>/dev/null || true
+
           # 直接复制包到package目录（不使用feeds机制）
+          rm -rf package/ddnsto
           mkdir -p package/ddnsto
           cp -r $GITHUB_WORKSPACE/ddnsto/* package/ddnsto/
-          
+
           echo "=== Package directory contents ==="
           ls -la package/ddnsto/
-          
+
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
           make defconfig
-          
+
+          # 构建前检查
+          echo "=== Pre-build check ==="
+          echo "DDNSTO_TYPE=$DDNSTO_TYPE"
+          ls -la build_dir/target-*/ddnsto-binary* 2>/dev/null || echo "No existing ddnsto build dir"
+
           # 构建 - 使用详细输出
           echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
           make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
@@ -205,11 +222,66 @@ jobs:
             tail -100 build.log
             exit 1
           }
-          
+
+          # 验证下载的二进制文件
+          echo "=== Verifying downloaded binary ==="
+          ls -la dl/ddnsto-binary*.tar.gz 2>/dev/null || echo "No tar.gz in dl"
+          if [ -f dl/ddnsto-binary-3.1.7.tar.gz ]; then
+            echo "Contents of standard tar.gz:"
+            tar -tzf dl/ddnsto-binary-3.1.7.tar.gz
+            echo "SHA256 of downloaded tar.gz:"
+            sha256sum dl/ddnsto-binary-3.1.7.tar.gz
+            echo "SHA256 of binaries inside standard tar.gz:"
+            tar -Oxf dl/ddnsto-binary-3.1.7.tar.gz ddnsto-binary-3.1.7/ddnsto.x86_64 2>/dev/null | sha256sum || echo "Cannot extract x86_64"
+            tar -Oxf dl/ddnsto-binary-3.1.7.tar.gz ddnsto-binary-3.1.7/ddnsto.aarch64 2>/dev/null | sha256sum || echo "Cannot extract aarch64"
+          fi
+          if [ -f dl/ddnsto-binary-lite-3.1.7.tar.gz ]; then
+            echo "Contents of lite tar.gz:"
+            tar -tzf dl/ddnsto-binary-lite-3.1.7.tar.gz
+            echo "SHA256 of downloaded lite tar.gz:"
+            sha256sum dl/ddnsto-binary-lite-3.1.7.tar.gz
+            echo "SHA256 of binaries inside lite tar.gz:"
+            tar -Oxf dl/ddnsto-binary-lite-3.1.7.tar.gz ddnsto-binary-lite-3.1.7/ddnsto.x86_64 2>/dev/null | sha256sum || echo "Cannot extract x86_64"
+            tar -Oxf dl/ddnsto-binary-lite-3.1.7.tar.gz ddnsto-binary-lite-3.1.7/ddnsto.aarch64 2>/dev/null | sha256sum || echo "Cannot extract aarch64"
+          fi
+          echo "Directory structure of build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -type d 2>/dev/null | head -20
+          echo "Files in build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -type f -ls 2>/dev/null || echo "No files found"
+          echo "SHA256 of ddnstod in .pkgdir:"
+          find build_dir/target-*/ddnsto-binary*/ -name "ddnstod" -type f -exec sha256sum {} \; 2>/dev/null || echo "No ddnstod found"
+          echo "SHA256 of ddnsto.* binaries in build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -name "ddnsto.*" -type f -exec sha256sum {} \; 2>/dev/null || echo "No ddnsto.* found"
+
+          echo "=== Post-build check ==="
+          ls -la build_dir/target-*/ddnsto-binary*/ 2>/dev/null || echo "Build dir not found"
+          find bin/packages/ -name "ddnsto*.ipk" 2>/dev/null || echo "No IPK found"
+
+          # 检查 IPK 文件中的二进制哈希
+          echo "=== Checking IPK content ==="
+          for ipk in $(find bin/packages/ -name "ddnsto*.ipk" 2>/dev/null); do
+            echo "IPK file: $ipk"
+            echo "File type:"
+            file "$ipk"
+            # IPK 文件是 tar.gz 格式，包含 debian-binary, control.tar.gz, data.tar.gz
+            rm -rf /tmp/ipk_check
+            mkdir -p /tmp/ipk_check
+            # 使用绝对路径解压
+            tar -xzf "$PWD/$ipk" -C /tmp/ipk_check 2>/dev/null || echo "Cannot extract IPK outer tar"
+            ls -la /tmp/ipk_check/
+            if [ -f "/tmp/ipk_check/data.tar.gz" ]; then
+              echo "Contents of data.tar.gz:"
+              tar -tzf /tmp/ipk_check/data.tar.gz | grep -E "(ddnsto|sbin)" || echo "No ddnsto in data.tar.gz"
+              echo "SHA256 of ddnstod in data.tar.gz:"
+              tar -Oxf /tmp/ipk_check/data.tar.gz ./usr/sbin/ddnstod 2>/dev/null | sha256sum || echo "Cannot extract ddnstod"
+            fi
+            rm -rf /tmp/ipk_check
+          done
+
           # 复制输出
           mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci
           find bin/packages/ -name "ddnsto*.ipk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
-          
+
           echo "=== Final packages ==="
           ls -la $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/
 
@@ -303,18 +375,35 @@ jobs:
       - name: Build Package
         run: |
           cd ~/sdk
-          
+
+          # 清理旧的 ddnsto 构建目录和下载文件，确保完全重新编译
+          # 必须删除整个构建目录和下载文件，因为哈希值可能不匹配
+          # 注意：lite和standard使用不同的构建目录
+          echo "=== Cleaning old build directories and downloads ==="
+          rm -rf build_dir/target-*/ddnsto-binary*
+          rm -rf build_dir/target-*/.ddnsto-binary*
+          rm -f dl/ddnsto-binary*.tar.gz
+          rm -f dl/ddnsto-binary*.tar.gz.flock
+          rm -rf staging_dir/packages/*/ddnsto*
+          find bin/packages/ -name "ddnsto*.apk" -delete 2>/dev/null || true
+
           # 直接复制包到package目录（不使用feeds机制）
+          rm -rf package/ddnsto
           mkdir -p package/ddnsto
           cp -r $GITHUB_WORKSPACE/ddnsto/* package/ddnsto/
-          
+
           echo "=== Package directory contents ==="
           ls -la package/ddnsto/
-          
+
           # 配置
           echo "CONFIG_PACKAGE_ddnsto=m" >> .config
           make defconfig
-          
+
+          # 构建前检查
+          echo "=== Pre-build check ==="
+          echo "DDNSTO_TYPE=$DDNSTO_TYPE"
+          ls -la build_dir/target-*/ddnsto-binary* 2>/dev/null || echo "No existing ddnsto build dir"
+
           # 构建 - 使用详细输出
           echo "=== Starting build with DDNSTO_TYPE=$DDNSTO_TYPE ==="
           make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
@@ -322,11 +411,53 @@ jobs:
             tail -100 build.log
             exit 1
           }
-          
+
+          # 验证下载的二进制文件
+          echo "=== Verifying downloaded binary ==="
+          ls -la dl/ddnsto-binary*.tar.gz 2>/dev/null || echo "No tar.gz in dl"
+          if [ -f dl/ddnsto-binary-3.1.7.tar.gz ]; then
+            echo "Contents of standard tar.gz:"
+            tar -tzf dl/ddnsto-binary-3.1.7.tar.gz
+            echo "SHA256 of downloaded tar.gz:"
+            sha256sum dl/ddnsto-binary-3.1.7.tar.gz
+            echo "SHA256 of binaries inside standard tar.gz:"
+            tar -Oxf dl/ddnsto-binary-3.1.7.tar.gz ddnsto-binary-3.1.7/ddnsto.x86_64 2>/dev/null | sha256sum || echo "Cannot extract x86_64"
+            tar -Oxf dl/ddnsto-binary-3.1.7.tar.gz ddnsto-binary-3.1.7/ddnsto.aarch64 2>/dev/null | sha256sum || echo "Cannot extract aarch64"
+          fi
+          if [ -f dl/ddnsto-binary-lite-3.1.7.tar.gz ]; then
+            echo "Contents of lite tar.gz:"
+            tar -tzf dl/ddnsto-binary-lite-3.1.7.tar.gz
+            echo "SHA256 of downloaded lite tar.gz:"
+            sha256sum dl/ddnsto-binary-lite-3.1.7.tar.gz
+            echo "SHA256 of binaries inside lite tar.gz:"
+            tar -Oxf dl/ddnsto-binary-lite-3.1.7.tar.gz ddnsto-binary-lite-3.1.7/ddnsto.x86_64 2>/dev/null | sha256sum || echo "Cannot extract x86_64"
+            tar -Oxf dl/ddnsto-binary-lite-3.1.7.tar.gz ddnsto-binary-lite-3.1.7/ddnsto.aarch64 2>/dev/null | sha256sum || echo "Cannot extract aarch64"
+          fi
+          echo "Directory structure of build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -type d 2>/dev/null | head -20
+          echo "Files in build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -type f -ls 2>/dev/null || echo "No files found"
+          echo "SHA256 of ddnstod in .pkgdir:"
+          find build_dir/target-*/ddnsto-binary*/ -name "ddnstod" -type f -exec sha256sum {} \; 2>/dev/null || echo "No ddnstod found"
+          echo "SHA256 of ddnsto.* binaries in build_dir:"
+          find build_dir/target-*/ddnsto-binary*/ -name "ddnsto.*" -type f -exec sha256sum {} \; 2>/dev/null || echo "No ddnsto.* found"
+
+          echo "=== Post-build check ==="
+          ls -la build_dir/target-*/ddnsto-binary*/ 2>/dev/null || echo "Build dir not found"
+          find bin/packages/ -name "ddnsto*.apk" 2>/dev/null || echo "No APK found"
+
+          # 检查 APK 文件中的二进制哈希
+          echo "=== Checking APK content ==="
+          for apk in $(find bin/packages/ -name "ddnsto*.apk" 2>/dev/null); do
+            echo "APK file: $apk"
+            # 使用 tar 列出内容
+            tar -tzf "$apk" 2>/dev/null | grep -E "(ddnsto|sbin)" || echo "No ddnsto in tar listing"
+          done
+
           # 复制输出
           mkdir -p $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci
           find bin/packages/ -name "ddnsto*.apk" -exec cp {} $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/ \;
-          
+
           echo "=== Final packages ==="
           ls -la $GITHUB_WORKSPACE/bin/packages/${{ matrix.arch_info.arch }}/packages_ci/
 
