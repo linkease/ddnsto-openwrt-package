@@ -261,16 +261,25 @@ jobs:
           echo "=== Checking IPK content ==="
           for ipk in $(find bin/packages/ -name "ddnsto*.ipk" 2>/dev/null); do
             echo "IPK file: $ipk"
-            # 解压 IPK 并检查二进制哈希
+            # 解压 IPK (IPK 是 ar 归档格式，包含 control.tar.gz 和 data.tar.gz)
             mkdir -p /tmp/ipk_check
             cd /tmp/ipk_check
-            tar -xzf "$ipk" 2>/dev/null || echo "Cannot extract IPK"
-            for tarfile in *.tar.gz; do
+            # 尝试用 ar 解压
+            ar -x "$ipk" 2>/dev/null || tar -xf "$ipk" 2>/dev/null || echo "Cannot extract IPK with ar or tar"
+            ls -la
+            for tarfile in data.tar.gz data.tar.xz data.tar; do
               [ -f "$tarfile" ] || continue
               echo "Checking $tarfile:"
-              tar -tzf "$tarfile" | grep -E "(ddnsto|sbin)" || echo "No ddnsto in $tarfile"
-              # 提取并计算哈希
-              tar -Oxf "$tarfile" 2>/dev/null | sha256sum || echo "Cannot calculate hash"
+              if [[ "$tarfile" == *.gz ]]; then
+                tar -tzf "$tarfile" 2>/dev/null | grep -E "(ddnsto|sbin)" || echo "No ddnsto in $tarfile"
+                # 提取 ddnstod 并计算哈希
+                tar -Oxf "$tarfile" ./usr/sbin/ddnstod 2>/dev/null | sha256sum || echo "Cannot extract ddnstod"
+              elif [[ "$tarfile" == *.xz ]]; then
+                tar -tJf "$tarfile" 2>/dev/null | grep -E "(ddnsto|sbin)" || echo "No ddnsto in $tarfile"
+                tar -Oxf "$tarfile" ./usr/sbin/ddnstod 2>/dev/null | sha256sum || echo "Cannot extract ddnstod"
+              else
+                tar -tf "$tarfile" 2>/dev/null | grep -E "(ddnsto|sbin)" || echo "No ddnsto in $tarfile"
+              fi
             done
             cd -
             rm -rf /tmp/ipk_check
