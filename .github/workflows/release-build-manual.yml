@@ -261,15 +261,27 @@ jobs:
           echo "=== Checking IPK content ==="
           for ipk in $(find bin/packages/ -name "ddnsto*.ipk" 2>/dev/null); do
             echo "IPK file: $ipk"
+            echo "File type:"
+            file "$ipk"
+            echo "First 100 bytes (hex):"
+            head -c 100 "$ipk" | xxd | head -10
             # 解压 IPK (IPK 是 ar 归档格式，包含 control.tar.gz 和 data.tar.gz)
             mkdir -p /tmp/ipk_check
             cd /tmp/ipk_check
             # 尝试用 ar 解压
-            ar -x "$ipk" 2>/dev/null || tar -xf "$ipk" 2>/dev/null || echo "Cannot extract IPK with ar or tar"
+            ar -x "$ipk" 2>/dev/null || echo "ar failed"
+            # 如果 ar 失败，尝试手动解压
+            if [ ! -f "debian-binary" ]; then
+              echo "Trying manual extraction..."
+              # 跳过 ar 头 (8字节 magic + 60字节 header)
+              tail -c +9 "$ipk" > /tmp/ipk_tail
+              # 查找 data.tar 的开始位置
+            fi
             ls -la
             for tarfile in data.tar.gz data.tar.xz data.tar; do
               [ -f "$tarfile" ] || continue
               echo "Checking $tarfile:"
+              file "$tarfile"
               if [[ "$tarfile" == *.gz ]]; then
                 tar -tzf "$tarfile" 2>/dev/null | grep -E "(ddnsto|sbin)" || echo "No ddnsto in $tarfile"
                 # 提取 ddnstod 并计算哈希
