@@ -12,7 +12,7 @@ PKG_ARCH_DDNSTO:=$(ARCH)
 PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
 PKG_SOURCE_DATE:=3.1.7
-PKG_RELEASE:=6
+PKG_RELEASE:=8
 
 # 构建类型：standard 或 lite
 DDNSTO_TYPE?=standard
@@ -42,18 +42,22 @@ PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 # 根据类型选择下载地址和文件名
 ifeq ($(DDNSTO_TYPE),lite)
   PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
-  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
-  PKG_HASH:=eb437a79b79d4a60838d6171b1934f35956fc49819e3ced55675c7d859fc80d1
+  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/webdav/
+  PKG_HASH:=d1e0396da617851a8c5762bff52fb69149d97ca4f863370d6b83502eea938106
+  PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE)
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
-  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
-  PKG_HASH:=93dbb92ffde552ed2006bfb6d2479549c8d02323eab3b3d1c45307fea999daaa
+  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/webdav/
+  PKG_HASH:=071de384631f5624d4857eb71065f94d2605709d0cea8f53433dfcb6053352f2
+  PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
 endif
-
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
 
 PKG_BUILD_PARALLEL:=1
 PKG_USE_MIPS16:=0
+
+# 禁用 strip，保持二进制文件原样
+STRIP:=true
+RSTRIP:=:
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -99,7 +103,6 @@ endef
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/config $(1)/etc/init.d $(1)/etc/uci-defaults
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddnsto.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddnstod
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ddwebdav.$(PKG_ARCH_DDNSTO) $(1)/usr/sbin/ddwebdav
 	$(INSTALL_CONF) ./files/ddnsto.config $(1)/etc/config/ddnsto
 	$(INSTALL_BIN) ./files/ddnsto.init $(1)/etc/init.d/ddnsto
 	$(INSTALL_BIN) ./files/ddnsto.uci-default $(1)/etc/uci-defaults/ddnsto
