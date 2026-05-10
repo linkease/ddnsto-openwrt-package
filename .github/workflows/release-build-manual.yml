@@ -179,7 +179,7 @@ jobs:
           cd ~/sdk
           # 安装主机编译依赖
           sudo apt-get update
-          sudo apt-get install -y libncurses5-dev libncursesw5-dev
+          sudo apt-get install -y libncurses5-dev libncursesw5-dev python3-setuptools
           ./scripts/feeds update -a || true
           ./scripts/feeds install -a || true
 
@@ -368,7 +368,7 @@ jobs:
           cd ~/sdk
           # 安装主机编译依赖
           sudo apt-get update
-          sudo apt-get install -y libncurses5-dev libncursesw5-dev
+          sudo apt-get install -y libncurses5-dev libncursesw5-dev python3-setuptools
           ./scripts/feeds update -a || true
           ./scripts/feeds install -a || true
 
