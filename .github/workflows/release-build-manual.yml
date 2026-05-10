@@ -161,9 +161,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/sdk
-          key: openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}-v2
+          key: openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}-v3
           restore-keys: |
-            openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-v2
+            openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-v3
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
@@ -337,9 +337,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/sdk
-          key: openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}-v2
+          key: openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}-v3
           restore-keys: |
-            openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-v2
+            openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-v3
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
