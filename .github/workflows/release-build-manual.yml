@@ -161,9 +161,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/sdk
-          key: openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}
+          key: openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}-v2
           restore-keys: |
-            openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-
+            openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
@@ -179,12 +179,13 @@ jobs:
           cd ~/sdk
           # 安装主机编译依赖
           sudo apt-get update
-          sudo apt-get install -y libncurses5-dev libncursesw5-dev
+          sudo apt-get install -y libncurses5-dev libncursesw5-dev python3-pip python3-pyelftools
+          pip3 install setuptools pyelftools
           ./scripts/feeds update -a || true
           ./scripts/feeds install -a || true
           # 为 OpenWrt 的 host python 安装 setuptools
           if [ -f staging_dir/host/bin/python3 ]; then
-            staging_dir/host/bin/python3 -m pip install setuptools || true
+            staging_dir/host/bin/python3 -m pip install setuptools pyelftools || true
           fi
 
       - name: Build Package
@@ -339,9 +340,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/sdk
-          key: openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}
+          key: openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}-v2
           restore-keys: |
-            openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-
+            openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
@@ -372,12 +373,13 @@ jobs:
           cd ~/sdk
           # 安装主机编译依赖
           sudo apt-get update
-          sudo apt-get install -y libncurses5-dev libncursesw5-dev
+          sudo apt-get install -y libncurses5-dev libncursesw5-dev python3-pip python3-pyelftools
+          pip3 install setuptools pyelftools
           ./scripts/feeds update -a || true
           ./scripts/feeds install -a || true
           # 为 OpenWrt 的 host python 安装 setuptools
           if [ -f staging_dir/host/bin/python3 ]; then
-            staging_dir/host/bin/python3 -m pip install setuptools || true
+            staging_dir/host/bin/python3 -m pip install setuptools pyelftools || true
           fi
 
       - name: Build Package
