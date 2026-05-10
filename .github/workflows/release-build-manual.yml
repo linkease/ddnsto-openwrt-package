@@ -163,7 +163,7 @@ jobs:
           path: ~/sdk
           key: openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}-v2
           restore-keys: |
-            openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-
+            openwrt-sdk-24.10.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-v2
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
@@ -179,16 +179,11 @@ jobs:
           cd ~/sdk
           # 安装主机编译依赖
           sudo apt-get update
-          sudo apt-get install -y libncurses5-dev libncursesw5-dev python3-pip python3-pyelftools
-          pip3 install setuptools pyelftools
+          sudo apt-get install -y libncurses5-dev libncursesw5-dev
           ./scripts/feeds update -a || true
           # 删除 u-boot-mediatek 包，避免 python3-setuptools 检测失败
           rm -rf feeds/base/package/boot/uboot-mediatek
           ./scripts/feeds install -a || true
-          # 为 OpenWrt 的 host python 安装 setuptools
-          if [ -f staging_dir/host/bin/python3 ]; then
-            staging_dir/host/bin/python3 -m pip install setuptools pyelftools || true
-          fi
 
       - name: Build Package
         run: |
@@ -344,7 +339,7 @@ jobs:
           path: ~/sdk
           key: openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-${{ hashFiles('ddnsto/Makefile') }}-v2
           restore-keys: |
-            openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-
+            openwrt-sdk-25.12.2-${{ matrix.arch_info.arch }}-${{ matrix.ddnsto_type }}-v2
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
@@ -375,16 +370,11 @@ jobs:
           cd ~/sdk
           # 安装主机编译依赖
           sudo apt-get update
-          sudo apt-get install -y libncurses5-dev libncursesw5-dev python3-pip python3-pyelftools
-          pip3 install setuptools pyelftools
+          sudo apt-get install -y libncurses5-dev libncursesw5-dev
           ./scripts/feeds update -a || true
           # 删除 u-boot-mediatek 包，避免 python3-setuptools 检测失败
           rm -rf feeds/base/package/boot/uboot-mediatek
           ./scripts/feeds install -a || true
-          # 为 OpenWrt 的 host python 安装 setuptools
-          if [ -f staging_dir/host/bin/python3 ]; then
-            staging_dir/host/bin/python3 -m pip install setuptools pyelftools || true
-          fi
 
       - name: Build Package
         run: |
