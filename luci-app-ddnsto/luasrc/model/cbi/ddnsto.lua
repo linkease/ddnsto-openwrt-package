@@ -1,6 +1,5 @@
 --wulishui <wulishui@gmail.com> ,20200911
 --jjm2473 <jjm2473@gmail.com> ,20210127
--- Updated for new OpenWrt with apk support
 
 local m, s, o
 
