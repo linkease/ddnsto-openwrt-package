@@ -1,0 +1,306 @@
+name: Build DDNSTO Packages (Unified)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ddnsto_type:
+        description: 'DDNSTO 类型'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - standard
+          - lite
+          - all
+      arch_aarch64:
+        description: 'aarch64_generic'
+        required: true
+        default: true
+        type: boolean
+      arch_arm:
+        description: 'arm_cortex-a9'
+        required: true
+        default: true
+        type: boolean
+      arch_x86_64:
+        description: 'x86_64'
+        required: true
+        default: true
+        type: boolean
+      arch_mipsel:
+        description: 'mipsel_24kc'
+        required: true
+        default: true
+        type: boolean
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.setup.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup matrix
+        id: setup
+        run: |
+          # SDK配置映射 - IPK使用24.10.2, APK使用25.12.2
+          declare -A SDK_URLS_IPK
+          SDK_URLS_IPK[aarch64_generic]="https://downloads.openwrt.org/releases/24.10.2/targets/armsr/armv8/openwrt-sdk-24.10.2-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS_IPK[arm_cortex-a9]="https://downloads.openwrt.org/releases/24.10.2/targets/mvebu/cortexa9/openwrt-sdk-24.10.2-mvebu-cortexa9_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst"
+          SDK_URLS_IPK[x86_64]="https://downloads.openwrt.org/releases/24.10.2/targets/x86/64/openwrt-sdk-24.10.2-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS_IPK[mipsel_24kc]="https://downloads.openwrt.org/releases/24.10.2/targets/ramips/mt7621/openwrt-sdk-24.10.2-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+
+          declare -A SDK_URLS_APK
+          SDK_URLS_APK[aarch64_generic]="https://downloads.openwrt.org/releases/25.12.2/targets/armsr/armv8/openwrt-sdk-25.12.2-armsr-armv8_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS_APK[arm_cortex-a9]="https://downloads.openwrt.org/releases/25.12.2/targets/mvebu/cortexa9/openwrt-sdk-25.12.2-mvebu-cortexa9_gcc-14.3.0_musl_eabi.Linux-x86_64.tar.zst"
+          SDK_URLS_APK[x86_64]="https://downloads.openwrt.org/releases/25.12.2/targets/x86/64/openwrt-sdk-25.12.2-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
+          SDK_URLS_APK[mipsel_24kc]="https://downloads.openwrt.org/releases/25.12.2/targets/ramips/mt7621/openwrt-sdk-25.12.2-ramips-mt7621_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
+
+          # 确定DDNSTO类型列表
+          if [ "${{ github.event_name }}" == "push" ]; then
+            ddnsto_types='["standard"]'
+          else
+            ddnsto_type_input="${{ github.event.inputs.ddnsto_type }}"
+            if [ "$ddnsto_type_input" == "all" ]; then
+              ddnsto_types='["standard","lite"]'
+            else
+              ddnsto_types="[\"$ddnsto_type_input\"]"
+            fi
+          fi
+
+          # 确定架构列表
+          if [ "${{ github.event_name }}" == "push" ]; then
+            arches=(aarch64_generic arm_cortex-a9 x86_64 mipsel_24kc)
+          else
+            arches=()
+            if [ "${{ github.event.inputs.arch_aarch64 }}" == "true" ]; then
+              arches+=(aarch64_generic)
+            fi
+            if [ "${{ github.event.inputs.arch_arm }}" == "true" ]; then
+              arches+=(arm_cortex-a9)
+            fi
+            if [ "${{ github.event.inputs.arch_x86_64 }}" == "true" ]; then
+              arches+=(x86_64)
+            fi
+            if [ "${{ github.event.inputs.arch_mipsel }}" == "true" ]; then
+              arches+=(mipsel_24kc)
+            fi
+            # 如果没有选择任何架构，默认构建全部
+            if [ ${#arches[@]} -eq 0 ]; then
+              arches=(aarch64_generic arm_cortex-a9 x86_64 mipsel_24kc)
+            fi
+          fi
+
+          # 构建矩阵JSON - 只包含架构和DDNSTO类型，IPK和APK在同一个runner中构建
+          matrix="["
+          first=true
+
+          for arch in "${arches[@]}"; do
+            for ddnsto_type in $(echo "$ddnsto_types" | jq -r '.[]'); do
+              if [ "$first" == "false" ]; then
+                matrix="$matrix,"
+              fi
+
+              matrix="$matrix{\"arch\":\"$arch\",\"ddnsto_type\":\"$ddnsto_type\",\"sdk_url_ipk\":\"${SDK_URLS_IPK[$arch]}\",\"sdk_url_apk\":\"${SDK_URLS_APK[$arch]}\"}"
+              first=false
+            done
+          done
+
+          matrix="$matrix]"
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "Matrix: $matrix"
+
+  build:
+    name: Build ${{ matrix.config.arch }} (${{ matrix.config.ddnsto_type }})
+    runs-on: ubuntu-latest
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        config: ${{ fromJson(needs.setup.outputs.matrix) }}
+    env:
+      DDNSTO_TYPE: ${{ matrix.config.ddnsto_type }}
+      ARCH: ${{ matrix.config.arch }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup variables
+        run: |
+          sudo timedatectl set-timezone 'Asia/Shanghai'
+          echo build_time="$(date '+%Y-%m-%d')" >> "$GITHUB_ENV"
+
+      - name: Cache IPK SDK
+        id: cache-sdk-ipk
+        uses: actions/cache@v4
+        with:
+          path: ~/sdk-ipk
+          key: openwrt-sdk-24.10.2-${ARCH}-${DDNSTO_TYPE}-${{ hashFiles('ddnsto/Makefile') }}-v3
+          restore-keys: |
+            openwrt-sdk-24.10.2-${ARCH}-${DDNSTO_TYPE}-v3
+
+      - name: Cache APK SDK
+        id: cache-sdk-apk
+        uses: actions/cache@v4
+        with:
+          path: ~/sdk-apk
+          key: openwrt-sdk-25.12.2-${ARCH}-${DDNSTO_TYPE}-${{ hashFiles('ddnsto/Makefile') }}-v3
+          restore-keys: |
+            openwrt-sdk-25.12.2-${ARCH}-${DDNSTO_TYPE}-v3
+
+      - name: Download IPK SDK
+        if: steps.cache-sdk-ipk.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/sdk-ipk
+          echo "Downloading IPK SDK from ${{ matrix.config.sdk_url_ipk }}"
+          wget -q --show-progress -O ~/sdk-ipk/sdk.tar.zst "${{ matrix.config.sdk_url_ipk }}"
+          echo "Extracting IPK SDK..."
+          cd ~/sdk-ipk && tar -xf sdk.tar.zst --strip-components=1 && rm sdk.tar.zst
+
+      - name: Download APK SDK
+        if: steps.cache-sdk-apk.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/sdk-apk
+          echo "Downloading APK SDK from ${{ matrix.config.sdk_url_apk }}"
+          wget -q --show-progress -O ~/sdk-apk/sdk.tar.zst "${{ matrix.config.sdk_url_apk }}"
+          echo "Extracting APK SDK..."
+          cd ~/sdk-apk && tar -xf sdk.tar.zst --strip-components=1 && rm sdk.tar.zst
+
+      - name: Setup SDKs
+        run: |
+          # 安装主机编译依赖
+          sudo apt-get update
+          sudo apt-get install -y libncurses5-dev libncursesw5-dev
+
+          for sdk in ~/sdk-ipk ~/sdk-apk; do
+            echo "=== Setting up SDK: $sdk ==="
+            cd "$sdk"
+            ./scripts/feeds update -a || true
+            # 删除 u-boot-mediatek 包，避免 python3-setuptools 检测失败
+            rm -rf feeds/base/package/boot/uboot-mediatek
+            ./scripts/feeds install -a || true
+          done
+
+      - name: Build Packages
+        run: |
+          for sdk in ~/sdk-ipk ~/sdk-apk; do
+            # 确定包类型
+            if [[ "$sdk" == *"ipk"* ]]; then
+              PKG_TYPE="ipk"
+            else
+              PKG_TYPE="apk"
+            fi
+
+            echo ""
+            echo "========================================"
+            echo "=== Building $PKG_TYPE for $ARCH ($DDNSTO_TYPE) ==="
+            echo "========================================"
+            echo ""
+
+            cd "$sdk"
+
+            # 清理旧的 ddnsto 构建目录和下载文件
+            echo "=== Cleaning old build directories ==="
+            rm -rf build_dir/target-*/ddnsto-binary*
+            rm -rf build_dir/target-*/.ddnsto-binary*
+            rm -f dl/ddnsto-binary*.tar.gz
+            rm -f dl/ddnsto-binary*.tar.gz.flock
+            rm -rf staging_dir/packages/*/ddnsto*
+            find bin/packages/ -name "ddnsto*.${PKG_TYPE}" -delete 2>/dev/null || true
+
+            # 直接复制包到package目录
+            rm -rf package/ddnsto
+            mkdir -p package/ddnsto
+            cp -r $GITHUB_WORKSPACE/ddnsto/* package/ddnsto/
+
+            echo "=== Package directory contents ==="
+            ls -la package/ddnsto/
+
+            # 配置
+            echo "CONFIG_PACKAGE_ddnsto=m" >> .config
+            make defconfig
+
+            # 构建前检查
+            echo "=== Pre-build check ==="
+            echo "DDNSTO_TYPE=$DDNSTO_TYPE, PKG_TYPE=$PKG_TYPE, ARCH=$ARCH"
+
+            # 构建
+            echo "=== Starting build ==="
+            make package/ddnsto/compile V=sc -j1 2>&1 | tee build.log || {
+              echo "=== DDNSTO BUILD FAILED for $PKG_TYPE ==="
+              tail -100 build.log
+              exit 1
+            }
+
+            # 验证
+            echo "=== Verifying build ==="
+            find bin/packages/ -name "ddnsto*.${PKG_TYPE}" -ls 2>/dev/null || echo "No ${PKG_TYPE} found"
+
+            # 复制输出到统一目录
+            mkdir -p "$GITHUB_WORKSPACE/output/${ARCH}/${PKG_TYPE}"
+            find bin/packages/ -name "ddnsto*.${PKG_TYPE}" -exec cp {} "$GITHUB_WORKSPACE/output/${ARCH}/${PKG_TYPE}/" \;
+
+            echo "=== $PKG_TYPE build completed ==="
+          done
+
+          echo ""
+          echo "=== All builds completed ==="
+          ls -laR "$GITHUB_WORKSPACE/output/${ARCH}/"
+
+      - name: Upload IPK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.config.arch }}-ipk-${{ matrix.config.ddnsto_type }}
+          path: output/${{ matrix.config.arch }}/ipk/*.ipk
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.config.arch }}-apk-${{ matrix.config.ddnsto_type }}
+          path: output/${{ matrix.config.arch }}/apk/*.apk
+
+      - name: Create release files
+        run: |
+          mkdir -p release/ipk release/apk
+          if [ -d "output/${ARCH}/ipk" ] && [ "$(ls -A output/${ARCH}/ipk/*.ipk 2>/dev/null)" ]; then
+            tar -zcvf release/ipk/${ARCH}-${DDNSTO_TYPE}.tar.gz -C output/${ARCH}/ipk/ .
+          fi
+          if [ -d "output/${ARCH}/apk" ] && [ "$(ls -A output/${ARCH}/apk/*.apk 2>/dev/null)" ]; then
+            tar -zcvf release/apk/${ARCH}-${DDNSTO_TYPE}.tar.gz -C output/${ARCH}/apk/ .
+          fi
+
+      - name: Upload IPK to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
+        with:
+          name: DDNSTO ${{ env.build_time }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          replacesArtifacts: false
+          artifacts: "release/ipk/${{ matrix.config.arch }}-${{ matrix.config.ddnsto_type }}.tar.gz"
+
+      - name: Upload APK to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
+        with:
+          name: DDNSTO ${{ env.build_time }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          replacesArtifacts: false
+          artifacts: "release/apk/${{ matrix.config.arch }}-${{ matrix.config.ddnsto_type }}.tar.gz"
