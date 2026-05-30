@@ -38,12 +38,12 @@ PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 ifeq ($(DDNSTO_TYPE),lite)
   PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
-  PKG_HASH:=e033f88a3c4fee5d1e7ca4e0d5a69d922f1790aa816c23fd3dd6799a0ceef014
+  PKG_HASH:=e4aeb61eac9bf81b3b94aaeb6b3919a7e0c6700fa684a0d139d00586fadad8b4
   PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE)
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
-  PKG_HASH:=7e421cae8c953c4cda8f2420b1292089cff2fce119eb23e693b44d7924e98d60
+  PKG_HASH:=3e5514cc917bef4d1d88eec9f15cde92a45def3ef8b2b04fc1b21254833cf54a
   PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
 endif
 
