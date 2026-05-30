@@ -11,7 +11,7 @@ PKG_ARCH_DDNSTO:=$(ARCH)
 
 PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
-PKG_SOURCE_DATE:=4.2.0
+PKG_SOURCE_DATE:=4.2.1
 PKG_RELEASE:=1
 
 # 构建类型：standard 或 lite
@@ -38,12 +38,12 @@ PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 ifeq ($(DDNSTO_TYPE),lite)
   PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
-  PKG_HASH:=efeca107e0e2086e59dd250d3ffb43f5d772f331cba77b31484773ffb5beb10e
+  PKG_HASH:=e033f88a3c4fee5d1e7ca4e0d5a69d922f1790aa816c23fd3dd6799a0ceef014
   PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE)
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-openwrt-package/raw/refs/heads/main/
-  PKG_HASH:=be6861b908f6d6ef51d15251f47965fe227f06706948b48f0ad596e012af1419
+  PKG_HASH:=7e421cae8c953c4cda8f2420b1292089cff2fce119eb23e693b44d7924e98d60
   PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
 endif
 
