@@ -199,6 +199,67 @@ local function diagnostics_bundle_via_cli(output_path)
   return false, stderr ~= "" and stderr or stdout
 end
 
+local function diagnostics_bundle_via_http(output_path)
+  local jsonc = require "luci.jsonc"
+  local request_body = [[{"reason":"luci-support","tail":500}]]
+  local request_cmd = string.format(
+    "curl -fsS -X POST -H 'Content-Type: application/json' --data %s %s",
+    shell_quote(request_body),
+    shell_quote("http://127.0.0.1:18333/diagnostics/bundle")
+  )
+  local rc, stdout, stderr = run_capture(request_cmd)
+  if rc ~= 0 or stdout == "" then
+    return false, stderr ~= "" and stderr or stdout
+  end
+
+  local ok, parsed = pcall(jsonc.parse, stdout)
+  local download_path = ok and type(parsed) == "table" and parsed.downloadPath or nil
+  if type(download_path) ~= "string" or download_path == "" then
+    return false, "missing downloadPath"
+  end
+
+  local download_cmd = string.format(
+    "curl -fsS %s -o %s",
+    shell_quote("http://127.0.0.1:18333" .. download_path),
+    shell_quote(output_path)
+  )
+  local download_rc, _, download_stderr = run_capture(download_cmd)
+  if download_rc == 0 and file_exists(output_path) then
+    return true, "http"
+  end
+
+  return false, download_stderr ~= "" and download_stderr or "bundle download failed"
+end
+
+local function offline_diagnosis_via_http()
+  local jsonc = require "luci.jsonc"
+  local cmd = string.format("curl -fsS %s", shell_quote("http://127.0.0.1:18333/offline-diagnosis"))
+  local rc, stdout, stderr = run_capture(cmd)
+  if rc ~= 0 or stdout == "" then
+    return nil, stderr ~= "" and stderr or stdout
+  end
+
+  local ok, parsed = pcall(jsonc.parse, stdout)
+  if not ok or type(parsed) ~= "table" then
+    return nil, "invalid offline diagnosis response"
+  end
+  return parsed, "http_status"
+end
+
+local function offline_diagnosis_via_cli()
+  local jsonc = require "luci.jsonc"
+  local rc, stdout, stderr = run_capture("/usr/sbin/ddnsto offline-diagnosis --json")
+  if rc ~= 0 or stdout == "" then
+    return nil, stderr ~= "" and stderr or stdout
+  end
+
+  local ok, parsed = pcall(jsonc.parse, stdout)
+  if not ok or type(parsed) ~= "table" then
+    return nil, "invalid offline diagnosis response"
+  end
+  return parsed, "cli_fallback"
+end
+
 local function stream_download(path, filename, content_type)
   local http = require "luci.http"
   local fp = io.open(path, "rb")
@@ -397,6 +458,7 @@ function index()
   entry({"admin", "services", "ddnsto", "api", "connectivity"},  call("api_connectivity")).leaf = true
   entry({"admin", "services", "ddnsto", "api", "status"},  call("api_status")).leaf = true
   entry({"admin", "services", "ddnsto", "api", "logs"},    call("api_logs")).leaf = true
+  entry({"admin", "services", "ddnsto", "api", "offline_diagnosis"}, call("api_offline_diagnosis")).leaf = true
   entry({"admin", "services", "ddnsto", "api", "support_bundle"}, call("api_support_bundle")).leaf = true
 end
 
@@ -817,6 +879,30 @@ function api_logs()
   write_json({ ok = true, data = { lines = arr, total = #arr, source = "logread_fallback" } })
 end
 
+function api_offline_diagnosis()
+  local http = require "luci.http"
+  local method = http.getenv("REQUEST_METHOD") or ""
+
+  if method ~= "GET" then
+    method_not_allowed()
+    return
+  end
+
+  local data, source = offline_diagnosis_via_http()
+  if data ~= nil then
+    write_json({ ok = true, data = data, source = source })
+    return
+  end
+
+  data, source = offline_diagnosis_via_cli()
+  if data ~= nil then
+    write_json({ ok = true, data = data, source = source })
+    return
+  end
+
+  write_json({ ok = false, error = "offline diagnosis unavailable" })
+end
+
 function api_support_bundle()
   local http = require "luci.http"
   local method = http.getenv("REQUEST_METHOD") or ""
@@ -827,7 +913,10 @@ function api_support_bundle()
   end
 
   local output_path = temp_path(".zip")
-  local ok, err = diagnostics_bundle_via_cli(output_path)
+  local ok, err = diagnostics_bundle_via_http(output_path)
+  if not ok then
+    ok, err = diagnostics_bundle_via_cli(output_path)
+  end
   if not ok then
     remove_file(output_path)
     http.status(500, "bundle failed")
