@@ -70,6 +70,17 @@ local function method_not_allowed()
   write_json({ ok = false, error = "method not allowed" })
 end
 
+local function conflict_request(msg, detail, code)
+  local http = require "luci.http"
+  http.status(409, msg or "conflict")
+  write_json({
+    ok = false,
+    error = msg or "conflict",
+    detail = detail or "",
+    code = code or "conflict",
+  })
+end
+
 local function read_json_body()
   local http = require "luci.http"
   local jsonc = require "luci.jsonc"
@@ -172,6 +183,26 @@ local function service_running()
     end
   end
   return false
+end
+
+local function read_identity_state()
+  local uci = require "luci.model.uci".cursor()
+  local state = {
+    router_id = "",
+    identity_mode = "",
+    device_uuid = "",
+  }
+  uci:foreach("ddnsto", "ddnsto", function(s)
+    state.router_id = s.router_id or state.router_id
+    state.identity_mode = s.identity_mode or state.identity_mode
+    state.device_uuid = s.device_uuid or state.device_uuid
+  end)
+  return state
+end
+
+local function run_init_action(action)
+  local sys = require "luci.sys"
+  return sys.call(string.format("/etc/init.d/ddnsto %s >/dev/null 2>&1", shell_quote(action)))
 end
 
 local function run_capture(cmd)
@@ -464,6 +495,7 @@ function index()
   -- entry({"admin", "ddnsto_dev"}, call("action_ddnsto_dev"), _("DDNSTO (Dev)"), 99).leaf = true
   
   entry({"admin", "services", "ddnsto", "api", "config"},  call("api_config")).leaf = true
+  entry({"admin", "services", "ddnsto", "api", "migrate_identity"}, call("api_migrate_identity")).leaf = true
   entry({"admin", "services", "ddnsto", "api", "service"}, call("api_service")).leaf = true
   entry({"admin", "services", "ddnsto", "api", "run"},     call("api_run")).leaf = true
   entry({"admin", "services", "ddnsto", "api", "restart"}, call("api_restart")).leaf = true
@@ -604,6 +636,120 @@ function api_config()
   sys.call("/etc/init.d/ddnsto restart >/dev/null 2>&1")
 
   write_json({ ok = true })
+end
+
+function api_migrate_identity()
+  local http = require "luci.http"
+  local uci = require "luci.model.uci".cursor()
+  local method = http.getenv("REQUEST_METHOD") or ""
+
+  if method ~= "POST" then
+    method_not_allowed()
+    return
+  end
+
+  if not require_csrf() then return end
+
+  local body = read_json_body()
+  local enabled      = param(body, "enabled")
+  local ddnsto_token = param(body, "ddnsto_token")
+  local index        = param(body, "index")
+  local logger       = param(body, "logger")
+  local feat_enabled = param(body, "feat_enabled")
+  local feat_port    = param(body, "feat_port")
+  local feat_username = param(body, "feat_username")
+  local feat_password = param(body, "feat_password")
+  local feat_disk_path_selected = param(body, "feat_disk_path_selected")
+  local confirm_reidentity = param(body, "confirm_reidentity")
+
+  if confirm_reidentity ~= "1" then
+    return bad_request("missing identity migration confirmation")
+  end
+  if enabled and not is_bool01(enabled) then return bad_request("bad enabled") end
+  if logger and not is_bool01(logger) then return bad_request("bad logger") end
+  if feat_enabled and not is_bool01(feat_enabled) then return bad_request("bad feat_enabled") end
+  if ddnsto_token ~= nil and has_space(ddnsto_token) then
+    return bad_request("令牌勿包含空格")
+  end
+  if not is_uint(index) then
+    return bad_request("请填写正确的设备编号，仅允许数字")
+  end
+  local index_num = tonumber(index)
+  if index_num < 0 or index_num > 99 then
+    return bad_request("请填写正确的设备编号，仅允许数字")
+  end
+
+  local enabled_on = enabled == "1"
+  local feat_on = feat_enabled == "1"
+  if enabled_on and is_empty(ddnsto_token) then
+    return bad_request("请填写正确用户Token（令牌）")
+  end
+  if feat_on then
+    if not is_uint(feat_port) then
+      return bad_request("请填写正确的端口")
+    end
+    local port_num = tonumber(feat_port)
+    if not port_num or port_num == 0 or port_num > 65535 then
+      return bad_request("请填写正确的端口")
+    end
+    if is_empty(feat_username) then
+      return bad_request("请填写授权用户名")
+    end
+    if has_space(feat_username) then
+      return bad_request("用户名请勿包含空格")
+    end
+    if is_empty(feat_password) then
+      return bad_request("请填写授权用户密码")
+    end
+    if has_space(feat_password) then
+      return bad_request("用户密码请勿包含空格")
+    end
+    if is_empty(feat_disk_path_selected) then
+      return bad_request("请填写共享磁盘路径")
+    end
+  end
+
+  local old_identity = read_identity_state()
+  local current = read_config()
+  local old_index = tostring(current.index or "0")
+  local identity_missing = is_empty(old_identity.router_id)
+  if tostring(index) == old_index and not identity_missing then
+    return conflict_request("identity migration not required", "index unchanged", "identity_migration_not_required")
+  end
+  local sid = ensure_ddnsto_section()
+
+  run_init_action("stop")
+
+  if enabled then uci:set("ddnsto", sid, "enabled", enabled) end
+  if ddnsto_token ~= nil then uci:set("ddnsto", sid, "token", ddnsto_token) end
+  if index then uci:set("ddnsto", sid, "index", index) end
+  if logger then uci:set("ddnsto", sid, "logger", logger) end
+  if feat_enabled then uci:set("ddnsto", sid, "feat_enabled", feat_enabled) end
+  if feat_port then uci:set("ddnsto", sid, "feat_port", feat_port) end
+  if feat_username then uci:set("ddnsto", sid, "feat_username", feat_username) end
+  if feat_password then uci:set("ddnsto", sid, "feat_password", feat_password) end
+  if feat_disk_path_selected then uci:set("ddnsto", sid, "feat_disk_path_selected", feat_disk_path_selected) end
+
+  uci:delete("ddnsto", sid, "router_id")
+  uci:delete("ddnsto", sid, "identity_mode")
+  uci:delete("ddnsto", sid, "device_uuid")
+  uci:commit("ddnsto")
+
+  local restart_rc = 0
+  if enabled ~= "0" then
+    restart_rc = run_init_action("start")
+  end
+
+  write_json({
+    ok = true,
+    data = {
+      old_index = old_index,
+      new_index = tostring(index),
+      old_router_id = old_identity.router_id or "",
+      service_started = restart_rc == 0 and enabled ~= "0" or false,
+      message = "设备身份已重置，服务正在使用新的设备编号重新生成设备 ID",
+    }
+  })
 end
 
 -- ==========
