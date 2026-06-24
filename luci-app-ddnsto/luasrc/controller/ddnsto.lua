@@ -159,6 +159,21 @@ local function file_exists(path)
   return false
 end
 
+local function service_running()
+  local sys = require "luci.sys"
+  local jsonc = require "luci.jsonc"
+  local raw = sys.exec([[ubus call service list '{"name":"ddnsto"}' 2>/dev/null]]) or ""
+  local ok, obj = pcall(jsonc.parse, raw)
+  if ok and type(obj) == "table" and type(obj.ddnsto) == "table" and type(obj.ddnsto.instances) == "table" then
+    for _, inst in pairs(obj.ddnsto.instances) do
+      if type(inst) == "table" and inst.running == true then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 local function run_capture(cmd)
   local sys = require "luci.sys"
   local stdout_path = temp_path(".stdout")
@@ -888,13 +903,17 @@ function api_offline_diagnosis()
     return
   end
 
-  local data, source = offline_diagnosis_via_http()
-  if data ~= nil then
-    write_json({ ok = true, data = data, source = source })
+  if not service_running() then
+    write_json({
+      ok = false,
+      error = "offline diagnosis unavailable",
+      detail = "ddnsto not running",
+      code = "ddnsto_not_running",
+    })
     return
   end
 
-  data, source = offline_diagnosis_via_cli()
+  local data, source = offline_diagnosis_via_http()
   if data ~= nil then
     write_json({ ok = true, data = data, source = source })
     return
@@ -912,11 +931,19 @@ function api_support_bundle()
     return
   end
 
+  if not service_running() then
+    http.status(409, "ddnsto not running")
+    write_json({
+      ok = false,
+      error = "diagnostics bundle unavailable",
+      detail = "ddnsto not running",
+      code = "ddnsto_not_running",
+    })
+    return
+  end
+
   local output_path = temp_path(".zip")
   local ok, err = diagnostics_bundle_via_http(output_path)
-  if not ok then
-    ok, err = diagnostics_bundle_via_cli(output_path)
-  end
   if not ok then
     remove_file(output_path)
     http.status(500, "bundle failed")
