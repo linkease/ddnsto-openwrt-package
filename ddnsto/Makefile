@@ -12,7 +12,7 @@ PKG_ARCH_DDNSTO:=$(ARCH)
 PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
 PKG_SOURCE_DATE:=4.2.2
-PKG_RELEASE:=4
+PKG_RELEASE:=1
 
 # 构建类型：standard 或 lite
 DDNSTO_TYPE?=standard
@@ -36,15 +36,15 @@ PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 
 # 根据类型选择下载地址和文件名
 ifeq ($(DDNSTO_TYPE),lite)
-  PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
-  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-binary/raw/refs/heads/main/$(PKG_SOURCE_DATE)/
-  PKG_HASH:=44116714a550be8cd4e8ccd5aaacb65f06969fc39a1c01237eff2db806d3b9bb
-  PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE)
+  PKG_SOURCE:=$(PKG_NAME)-lite-$(PKG_SOURCE_DATE).tar.gz
+  PKG_SOURCE_URL:=https://fw0.koolcenter.com/binary/ddnsto/linux-binary/
+  PKG_HASH:=d6a18ba629e1eab7cad57f5399ef89ad875183a19d24a145529bfb84a27079c9
+  PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-lite-$(PKG_SOURCE_DATE)
 else
-  PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
-  PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-binary/raw/refs/heads/main/$(PKG_SOURCE_DATE)/
-  PKG_HASH:=c35e432cef0125babba7e24df3387441ba3092639545a6ab0d836407c8508a91
-  PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
+  PKG_SOURCE:=$(PKG_NAME)-standard-$(PKG_SOURCE_DATE).tar.gz
+  PKG_SOURCE_URL:=https://fw0.koolcenter.com/binary/ddnsto/linux-binary/
+  PKG_HASH:=5a76072663e38324c03408ef1900c112851eb821d592951d61d925436324695a
+  PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-standard-$(PKG_SOURCE_DATE)
 endif
 
 PKG_BUILD_PARALLEL:=1
