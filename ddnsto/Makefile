@@ -11,7 +11,7 @@ PKG_ARCH_DDNSTO:=$(ARCH)
 
 PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
-PKG_SOURCE_DATE:=4.2.1
+PKG_SOURCE_DATE:=4.2.2
 PKG_RELEASE:=4
 
 # 构建类型：standard 或 lite
@@ -38,12 +38,12 @@ PKG_SOURCE_VERSION:=$(ARCH_HEXCODE)
 ifeq ($(DDNSTO_TYPE),lite)
   PKG_SOURCE:=$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-binary/raw/refs/heads/main/$(PKG_SOURCE_DATE)/
-  PKG_HASH:=1e4de7c7260a80f951dddd6a36745ca7278efd954fddd9e4efd9e50cbb41e743
+  PKG_HASH:=44116714a550be8cd4e8ccd5aaacb65f06969fc39a1c01237eff2db806d3b9bb
   PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-lite-$(PKG_SOURCE_DATE)
 else
   PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://github.com/linkease/ddnsto-binary/raw/refs/heads/main/$(PKG_SOURCE_DATE)/
-  PKG_HASH:=2190f338422e414fb88b1e1c1c38a22d05dc61e6a907f2008d1ec914f54b7003
+  PKG_HASH:=c35e432cef0125babba7e24df3387441ba3092639545a6ab0d836407c8508a91
   PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_SOURCE_DATE)
 endif
 
