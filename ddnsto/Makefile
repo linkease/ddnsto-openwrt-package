@@ -11,7 +11,7 @@ PKG_ARCH_DDNSTO:=$(ARCH)
 
 PKG_NAME:=ddnsto
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compatible
-PKG_SOURCE_DATE:=4.2.5
+PKG_SOURCE_DATE:=4.2.6
 PKG_RELEASE:=1
 
 # 构建类型：standard 或 lite
@@ -43,7 +43,7 @@ ifeq ($(DDNSTO_TYPE),lite)
 else
   PKG_SOURCE:=$(PKG_NAME)-standard-$(PKG_SOURCE_DATE).tar.gz
   PKG_SOURCE_URL:=https://fw0.koolcenter.com/binary/ddnsto/linux-binary/
-  PKG_HASH:=ca149c665b2b201f19df349bc9f315928c23930305afe2cf0e10c9f3f5745d66
+  PKG_HASH:=4521d0b2ffeb35c4f539380c604c5d40577cb03d3938c98064324c098c276a3b
   PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-standard-$(PKG_SOURCE_DATE)
 endif
 
