@@ -10,6 +10,7 @@ DDNSTO 远程访问 OpenWrt 软件包，支持新版本 OpenWrt (SNAPSHOT) 的 a
 - ✅ WebDAV 文件共享
 - ✅ 网络连通性检测
 - ✅ 现代化 React 管理界面
+- ✅ LuCI 检查更新和二进制自更新
 
 ## 支持的架构
 
@@ -61,6 +62,34 @@ opkg install ddnsto luci-app-ddnsto
 2. 设置端口（默认 3033）
 3. 设置用户名和密码
 4. 选择共享路径
+
+### 软件更新
+
+进入 LuCI 的“服务 -> DDNSTO 远程控制”，点击“检查更新”。如果发现新版本，页面会显示版本、更新内容和文件大小，并可直接更新 `ddnstod` 二进制。
+
+更新过程会下载并校验二进制，更新后由 `procd` 重启服务；启动检查失败时会尝试使用 `.bak` 恢复旧版本。设备原有的开机自启动设置不会被修改。
+
+默认更新源为：
+
+```text
+https://fw.koolcenter.com/binary/ddnsto/AutoUpgrade/standard
+```
+
+测试 GitHub Release 时，可临时设置 UCI 覆盖：
+
+```bash
+uci set ddnsto.@ddnsto[0].update_github_repo='linkease/ddnsto-update-test'
+uci set ddnsto.@ddnsto[0].update_github_branch='main'
+uci commit ddnsto
+```
+
+测试完成后删除覆盖项即可恢复正式 fw 地址：
+
+```bash
+uci delete ddnsto.@ddnsto[0].update_github_repo
+uci delete ddnsto.@ddnsto[0].update_github_branch
+uci commit ddnsto
+```
 
 ## 编译
 
@@ -142,6 +171,8 @@ LuCI 控制器提供以下 RESTful API：
 | `/api/service` | POST | 服务控制（start/stop/restart） |
 | `/api/logs` | GET | 获取日志 |
 | `/api/connectivity` | GET | 网络连通性检测 |
+| `/api/update/check` | GET | 检查二进制更新 |
+| `/api/update/apply` | POST | 下载、校验、替换并重启服务 |
 
 ## 迁移说明
 
