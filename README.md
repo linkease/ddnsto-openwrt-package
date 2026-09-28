@@ -65,7 +65,22 @@ opkg install ddnsto luci-app-ddnsto
 
 ### 软件更新
 
-进入 LuCI 的“服务 -> DDNSTO 远程控制”，点击“检查更新”。如果发现新版本，页面会显示版本、更新内容和文件大小，并可直接更新 `ddnstod` 二进制。
+LuCI 软件更新入口默认关闭，以避免大量设备同时下载造成更新洪峰。当前请使用设备上的 CLI 手动触发更新：
+
+```bash
+/usr/sbin/ddnstod update check
+/usr/sbin/ddnstod update --yes
+```
+
+如需临时恢复 LuCI 更新模块，可执行：
+
+```bash
+uci set ddnsto.@ddnsto[0].update_enabled='1'
+uci commit ddnsto
+rm -f /tmp/luci-indexcache
+```
+
+恢复前应确认更新源已具备 CDN、缓存和限流能力。关闭入口只影响 LuCI，不影响 CLI。
 
 更新过程会下载并校验二进制，更新后由 `procd` 重启服务；启动检查失败时会尝试使用 `.bak` 恢复旧版本。设备原有的开机自启动设置不会被修改。
 

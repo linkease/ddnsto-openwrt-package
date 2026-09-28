@@ -246,6 +246,15 @@ local function update_cli_command(action)
   )
 end
 
+local function update_feature_enabled()
+  local uci = require "luci.model.uci".cursor()
+  local enabled = "0"
+  uci:foreach("ddnsto", "ddnsto", function(s)
+    enabled = s.update_enabled or enabled
+  end)
+  return enabled == "1"
+end
+
 local function run_update_cli(action)
   local jsonc = require "luci.jsonc"
   local rc, stdout, stderr = run_capture(update_cli_command(action))
@@ -494,6 +503,7 @@ local function read_config()
   local sys = require "luci.sys"
   local cfg = {
     enabled      = "1",
+    update_enabled = "0",
     token        = "",
     index        = "0",
     logger       = "0",
@@ -510,6 +520,7 @@ local function read_config()
 
   uci:foreach("ddnsto", "ddnsto", function(s)
     cfg.enabled      = s.enabled or cfg.enabled
+    cfg.update_enabled = s.update_enabled or cfg.update_enabled
     cfg.token        = s.token or cfg.token
     cfg.index        = s.index or cfg.index
     cfg.logger       = s.logger or cfg.logger
@@ -1022,6 +1033,17 @@ function api_update_check()
     return
   end
 
+  if not update_feature_enabled() then
+    http.status(503, "update temporarily disabled")
+    write_json({
+      ok = false,
+      error = "update temporarily disabled",
+      code = "update_temporarily_disabled",
+      detail = "LuCI 更新入口暂时关闭，请使用 ddnsto CLI 手动更新。",
+    })
+    return
+  end
+
   local result, detail, rc = run_update_cli("check")
   if not result then
     http.status(502, "update check failed")
@@ -1037,6 +1059,17 @@ function api_update_apply()
   local method = http.getenv("REQUEST_METHOD") or ""
   if method ~= "POST" then
     method_not_allowed()
+    return
+  end
+
+  if not update_feature_enabled() then
+    http.status(503, "update temporarily disabled")
+    write_json({
+      ok = false,
+      error = "update temporarily disabled",
+      code = "update_temporarily_disabled",
+      detail = "LuCI 更新入口暂时关闭，请使用 ddnsto CLI 手动更新。",
+    })
     return
   end
   if not require_csrf() then return end
