@@ -108,6 +108,15 @@ uci commit ddnsto
 
 ## 编译
 
+### 当前打包基线（2026-10-29）
+
+- 核心 Standard 客户端：4.2.8，沿用远端提交 `fb34198` 的下载地址和 SHA-256。
+- LuCI 包：4.2.8-r1；静态 `index.js` 由兄弟仓库 `ddnsto-openwrt-web` 的 `6f07ede` 执行 `pnpm build` 生成，包含最新设置页及官网/控制台跳转统计。
+- 保留本仓库的 Lua 控制器、模板、CSRF、诊断及更新开关逻辑；Web 仓库的 Lua 副本并不包含这些完整功能，不能整目录覆盖。开发入口及 LuCI 更新入口继续默认关闭。
+- 本次仅更新包目录，未生成或发布 IPK/APK，尚未完成路由器真机验收。Lite 分支的摘要仍是历史占位值，不属于本次可发布集合。
+
+后续同步 Web 时，在兄弟仓库执行 `pnpm build`，将 `build/index.js` 同步至本仓库 `luci-app-ddnsto/root/www/luci-static/ddnsto/index.js`；若构建产生额外 chunk，须一并检查并同步。不要复制开发页面或直接覆盖 Lua 后端。
+
 ### 本地编译
 
 ```bash
