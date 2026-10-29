@@ -583,6 +583,11 @@ function index()
   entry({"admin", "services", "ddnsto", "page"}, call("action_page"), _("Settings"), 10).leaf = true
   -- entry({"admin", "ddnsto_dev"}, call("action_ddnsto_dev"), _("DDNSTO (Dev)"), 99).leaf = true
   
+  -- Older LuCI dispatchers require explicit intermediate nodes to mark them
+  -- satisfied. Keep these non-leaf so requests reach the API handlers.
+  entry({"admin", "services", "ddnsto", "api"}, firstchild())
+  entry({"admin", "services", "ddnsto", "api", "onboarding"}, firstchild())
+  entry({"admin", "services", "ddnsto", "api", "update"}, firstchild())
   entry({"admin", "services", "ddnsto", "api", "config"},  call("api_config")).leaf = true
   entry({"admin", "services", "ddnsto", "api", "migrate_identity"}, call("api_migrate_identity")).leaf = true
   entry({"admin", "services", "ddnsto", "api", "service"}, call("api_service")).leaf = true
