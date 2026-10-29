@@ -113,9 +113,12 @@ uci commit ddnsto
 - 核心 Standard 客户端：4.2.8，沿用远端提交 `fb34198` 的下载地址和 SHA-256。
 - LuCI 包：4.2.8-r1；静态 `index.js` 由兄弟仓库 `ddnsto-openwrt-web` 的 `6f07ede` 执行 `pnpm build` 生成，包含最新设置页及官网/控制台跳转统计。
 - 保留本仓库的 Lua 控制器、模板、CSRF、诊断及更新开关逻辑；Web 仓库的 Lua 副本并不包含这些完整功能，不能整目录覆盖。开发入口及 LuCI 更新入口继续默认关闭。
-- 本次仅更新包目录，未生成或发布 IPK/APK，尚未完成路由器真机验收。Lite 分支的摘要仍是历史占位值，不属于本次可发布集合。
+- `DDNSTO_TYPE=lite` 保留原有 CI 选项和 IPK/APK 命名，二进制源改为 `https://fw0.koolcenter.com/binary/ddnsto/linux-binary/ddnsto-micro-4.2.8.tar.gz`，解包目录为 `ddnsto-micro-4.2.8`。SHA-256 为 `1f02efa595df4740312eb633da1453b8ab8abc0e6b3bf33285a878430c0e7f3b`，已通过实际下载核验；归档包含 x86_64、aarch64、arm、mipsel 四个打包目标所需二进制。
+- 本次仅更新包目录，未生成或发布 IPK/APK，尚未完成路由器真机验收。
 
 后续同步 Web 时，在兄弟仓库执行 `pnpm build`，将 `build/index.js` 同步至本仓库 `luci-app-ddnsto/root/www/luci-static/ddnsto/index.js`；若构建产生额外 chunk，须一并检查并同步。不要复制开发页面或直接覆盖 Lua 后端。
+
+下载源映射回归检查：`PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`。测试使用 GNU make 展开真实包配置，检查 Lite→Micro 映射、摘要、架构和 Standard 源不变；不替代 SDK 构建。
 
 ### 本地编译
 
