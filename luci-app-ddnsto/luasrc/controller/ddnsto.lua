@@ -725,13 +725,20 @@ function api_config()
   if feat_password then uci:set("ddnsto", sid, "feat_password", feat_password) end
   if feat_disk_path_selected then uci:set("ddnsto", sid, "feat_disk_path_selected", feat_disk_path_selected) end
 
-  uci:commit("ddnsto")
+  if not uci:commit("ddnsto") then
+    return bad_request("配置保存失败，请重试")
+  end
 
-  -- Restart service to apply changes
+  -- This request may travel through ddnstod itself. Detach the restart and
+  -- allow the HTTP response to leave the tunnel before shutting it down.
   local sys = require "luci.sys"
-  sys.call("/etc/init.d/ddnsto restart >/dev/null 2>&1")
+  local ret = sys.call("(sleep 3; /etc/init.d/ddnsto restart) </dev/null >/dev/null 2>&1 &")
+  if ret ~= 0 then
+    return bad_request("配置已保存，但未能安排服务重启，请手动重启 DDNSTO")
+  end
 
-  write_json({ ok = true })
+  write_json({ ok = true, restart_pending = true })
+  http.close()
 end
 
 function api_migrate_identity()
